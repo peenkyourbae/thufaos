@@ -62,15 +62,15 @@
                 </div>
 
                 <div class="topbar-actions">
-    <button class="secondary-button" id="export-schedules">
+    <button class="secondary-button" id="export-schedules" type="button" aria-label="Export schedules backup">
         Export
     </button>
 
-    <button class="secondary-button" id="import-schedules">
+    <button class="secondary-button" id="import-schedules" type="button" aria-label="Import schedules backup">
         Import
     </button>
 
-    <button class="primary-button" id="open-add">
+    <button class="primary-button" id="open-add" type="button">
         <span>＋</span> Add Schedule
     </button>
 
@@ -118,6 +118,49 @@
                     </div>
 
                 </div>
+
+                <section class="intelligence-grid" aria-label="Daily and weekly overview">
+                    <article class="next-event-card" id="next-event-card">
+                        <div class="intelligence-card-heading">
+                            <p class="eyebrow">UP NEXT</p>
+                            <span class="live-dot" aria-hidden="true"></span>
+                        </div>
+                        <h2 id="next-event-title">You're all caught up.</h2>
+                        <p id="next-event-meta" class="next-event-meta">No upcoming events scheduled.</p>
+                        <div class="next-event-footer">
+                            <span id="next-event-countdown">Enjoy the free time</span>
+                            <span class="next-event-tag">NEXT EVENT</span>
+                        </div>
+                    </article>
+
+                    <article class="intelligence-card progress-card">
+                        <div class="intelligence-card-heading">
+                            <p class="eyebrow">DAILY PROGRESS</p>
+                            <span class="progress-number" id="daily-progress-number">0%</span>
+                        </div>
+                        <div class="progress-copy">
+                            <strong id="daily-progress-title">A fresh start</strong>
+                            <span id="daily-progress-caption">No events scheduled today</span>
+                        </div>
+                        <div class="progress-track" role="progressbar" aria-label="Today's schedule progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="daily-progress-bar">
+                            <span id="daily-progress-fill"></span>
+                        </div>
+                        <p class="card-footnote" id="daily-progress-footnote">Your day, at your pace.</p>
+                    </article>
+
+                    <article class="intelligence-card weekly-card">
+                        <div class="intelligence-card-heading">
+                            <p class="eyebrow">THIS WEEK</p>
+                            <span class="weekly-range" id="weekly-range-label">Weekly overview</span>
+                        </div>
+                        <div class="weekly-total-row">
+                            <strong id="weekly-total">0</strong>
+                            <span>scheduled<br>events</span>
+                        </div>
+                        <div class="weekly-days" id="weekly-days" aria-label="Events by day"></div>
+                        <p class="card-footnote" id="weekly-summary">A little space for everything.</p>
+                    </article>
+                </section>
 
                 <section class="section-block">
 

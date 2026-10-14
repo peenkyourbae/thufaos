@@ -215,6 +215,128 @@ function getUpcomingSchedules() {
     );
 }
 
+
+function getScheduleDateTime(event, field = "start") {
+    const time = event[field] || "00:00";
+    const [hours, minutes] = time.split(":").map(Number);
+    const date = parseLocalDate(event.date);
+    date.setHours(hours || 0, minutes || 0, 0, 0);
+    return date;
+}
+
+function getWeekDates(referenceDate = new Date()) {
+    const start = startOfWeek(referenceDate);
+    return Array.from({ length: 7 }, (_, index) => {
+        const date = new Date(start);
+        date.setDate(start.getDate() + index);
+        return date;
+    });
+}
+
+function renderDashboardIntelligence() {
+    const now = new Date();
+    const today = dateKey(now);
+    const todayEvents = getSortedSchedules(
+        schedules.filter(item => item.date === today)
+    );
+
+    // Next event: prefer an event that is currently in progress, otherwise the next future start.
+    const upcoming = getSortedSchedules(
+        schedules.filter(item => getScheduleDateTime(item, "end") > now)
+    );
+    const nextEvent = upcoming[0];
+    const nextTitle = $("#next-event-title");
+    const nextMeta = $("#next-event-meta");
+    const nextCountdown = $("#next-event-countdown");
+    const nextCard = $("#next-event-card");
+
+    if (nextEvent) {
+        const startsAt = getScheduleDateTime(nextEvent, "start");
+        const endsAt = getScheduleDateTime(nextEvent, "end");
+        const isToday = nextEvent.date === today;
+        const isOngoing = startsAt <= now && endsAt > now;
+
+        nextTitle.textContent = nextEvent.title;
+        nextMeta.textContent = [
+            isToday ? "Today" : formatDate(nextEvent.date, { weekday: "short", day: "numeric", month: "short" }),
+            `${formatTime(nextEvent.start)} – ${formatTime(nextEvent.end)}`,
+            nextEvent.location || ""
+        ].filter(Boolean).join(" · ");
+
+        if (isOngoing) {
+            const minutesLeft = Math.max(1, Math.ceil((endsAt - now) / 60000));
+            nextCountdown.textContent = `In progress · ${minutesLeft} min left`;
+        } else {
+            const minutesUntil = Math.max(0, Math.ceil((startsAt - now) / 60000));
+            if (minutesUntil < 1) {
+                nextCountdown.textContent = "Starting now";
+            } else if (minutesUntil < 60) {
+                nextCountdown.textContent = `Starts in ${minutesUntil} min`;
+            } else if (minutesUntil < 1440) {
+                const hours = Math.floor(minutesUntil / 60);
+                const minutes = minutesUntil % 60;
+                nextCountdown.textContent = `Starts in ${hours}h${minutes ? ` ${minutes}m` : ""}`;
+            } else {
+                const days = Math.floor(minutesUntil / 1440);
+                nextCountdown.textContent = `Starts in ${days} day${days === 1 ? "" : "s"}`;
+            }
+        }
+        nextCard.classList.toggle("is-ongoing", isOngoing);
+    } else {
+        nextTitle.textContent = "You're all caught up.";
+        nextMeta.textContent = "No upcoming events scheduled.";
+        nextCountdown.textContent = "Enjoy the free time";
+        nextCard.classList.remove("is-ongoing");
+    }
+
+    // Daily progress is time-based: events whose end time has passed count as completed.
+    const completedToday = todayEvents.filter(
+        item => getScheduleDateTime(item, "end") <= now
+    ).length;
+    const totalToday = todayEvents.length;
+    const percent = totalToday ? Math.round((completedToday / totalToday) * 100) : 0;
+
+    $("#daily-progress-number").textContent = `${percent}%`;
+    $("#daily-progress-title").textContent = totalToday
+        ? `${completedToday} of ${totalToday} completed`
+        : "A fresh start";
+    $("#daily-progress-caption").textContent = totalToday
+        ? `${totalToday - completedToday} event${totalToday - completedToday === 1 ? "" : "s"} left today`
+        : "No events scheduled today";
+    $("#daily-progress-fill").style.width = `${percent}%`;
+    $("#daily-progress-bar").setAttribute("aria-valuenow", String(percent));
+    $("#daily-progress-footnote").textContent = totalToday
+        ? (percent === 100 ? "Everything on today's list is done." : "Progress updates with your schedule.")
+        : "Your day, at your pace.";
+
+    // Weekly overview: current Monday–Sunday, with a compact bar per day.
+    const week = getWeekDates(now);
+    const weekKeys = week.map(dateKey);
+    const weeklyEvents = schedules.filter(item => weekKeys.includes(item.date));
+    const counts = week.map(date => schedules.filter(item => item.date === dateKey(date)).length);
+    const maxCount = Math.max(1, ...counts);
+    const busiestIndex = counts.indexOf(Math.max(...counts));
+    const busiestCount = counts[busiestIndex];
+
+    $("#weekly-total").textContent = String(weeklyEvents.length);
+    $("#weekly-range-label").textContent =
+        `${week[0].toLocaleDateString("en-GB", { day: "numeric", month: "short" })}–${week[6].toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
+    $("#weekly-days").innerHTML = week.map((date, index) => {
+        const key = dateKey(date);
+        const isToday = key === today;
+        const height = counts[index] ? Math.max(12, Math.round((counts[index] / maxCount) * 34)) : 5;
+        return `<div class="weekly-day ${isToday ? "is-today" : ""}" title="${escapeHTML(date.toLocaleDateString("en-GB", { weekday: "long" }))}: ${counts[index]} event${counts[index] === 1 ? "" : "s"}">
+            <span class="weekly-bar-wrap"><span class="weekly-bar" style="height:${height}px"></span></span>
+            <span class="weekly-day-label">${date.toLocaleDateString("en-GB", { weekday: "narrow" })}</span>
+            <span class="weekly-day-count">${counts[index] || "–"}</span>
+        </div>`;
+    }).join("");
+
+    $("#weekly-summary").textContent = weeklyEvents.length
+        ? `${busiestCount} event${busiestCount === 1 ? "" : "s"} on ${week[busiestIndex].toLocaleDateString("en-GB", { weekday: "long" })} · ${Math.round(weeklyEvents.length / 7 * 10) / 10} per day on average`
+        : "A little space for everything.";
+}
+
 function renderDashboard() {
     const now = new Date();
     const today = dateKey(now);
@@ -239,6 +361,7 @@ function renderDashboard() {
         schedules.filter(event => event.date >= today).length;
 
     $("#category-count").textContent = categories.length;
+    renderDashboardIntelligence();
 
     renderAgendaList(
         $("#today-agenda"),
