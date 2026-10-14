@@ -61,9 +61,26 @@
                     <h1 id="page-title">Dashboard</h1>
                 </div>
 
-                <button class="primary-button" id="open-add">
-                    <span>＋</span> Add Schedule
-                </button>
+                <div class="topbar-actions">
+    <button class="secondary-button" id="export-schedules">
+        Export
+    </button>
+
+    <button class="secondary-button" id="import-schedules">
+        Import
+    </button>
+
+    <button class="primary-button" id="open-add">
+        <span>＋</span> Add Schedule
+    </button>
+
+    <input
+        type="file"
+        id="import-file"
+        accept=".json,application/json"
+        hidden
+    >
+</div>
             </header>
 
             <section id="dashboard-view">

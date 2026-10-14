@@ -35,6 +35,106 @@ function saveSchedules() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
 }
 
+function exportSchedules() {
+    const backup = {
+        app: "ThufaOS",
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        schedules: schedules
+    };
+
+    const blob = new Blob(
+        [JSON.stringify(backup, null, 2)],
+        { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const today = dateKey(new Date());
+
+    link.href = url;
+    link.download = `thufaos-backup-${today}.json`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    showToast(`${schedules.length} schedules exported.`);
+}
+
+async function importSchedules(file) {
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const backup = JSON.parse(text);
+
+        const importedSchedules = Array.isArray(backup)
+            ? backup
+            : backup.schedules;
+
+        if (!Array.isArray(importedSchedules)) {
+            throw new Error("Invalid backup format.");
+        }
+
+        const validSchedules = importedSchedules.filter(item =>
+            item &&
+            typeof item.id === "string" &&
+            typeof item.title === "string" &&
+            typeof item.date === "string" &&
+            typeof item.start === "string" &&
+            typeof item.end === "string" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(item.date) &&
+            /^\d{2}:\d{2}$/.test(item.start) &&
+            /^\d{2}:\d{2}$/.test(item.end)
+        );
+
+        if (validSchedules.length !== importedSchedules.length) {
+            throw new Error(
+                "Some schedules are invalid. No data was imported."
+            );
+        }
+
+        const confirmed = confirm(
+            `Import ${validSchedules.length} schedules?\n\n` +
+            "Schedules with matching IDs will be updated. " +
+            "Other schedules will be kept."
+        );
+
+        if (!confirmed) return;
+
+        const merged = new Map(
+            schedules.map(item => [item.id, item])
+        );
+
+        validSchedules.forEach(item => {
+            merged.set(item.id, {
+                ...item,
+                calendarEventId: item.calendarEventId || null
+            });
+        });
+
+        schedules = Array.from(merged.values());
+
+        saveSchedules();
+        renderAll();
+
+        showToast(
+            `Import successful. ${validSchedules.length} schedules processed.`
+        );
+
+    } catch (error) {
+        console.error("Import failed:", error);
+
+        showToast(
+            error.message || "Unable to import backup file."
+        );
+    }
+}
+
 function dateKey(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -526,6 +626,21 @@ document.querySelectorAll(".nav-item").forEach(button => {
 });
 
 $("#open-add").addEventListener("click", () => openModal());
+$("#export-schedules").addEventListener("click", exportSchedules);
+
+$("#import-schedules").addEventListener("click", () => {
+    $("#import-file").click();
+});
+
+$("#import-file").addEventListener("change", async event => {
+    const file = event.target.files[0];
+
+    if (file) {
+        await importSchedules(file);
+    }
+
+    event.target.value = "";
+});
 $("#close-modal").addEventListener("click", closeModal);
 $("#cancel-modal").addEventListener("click", closeModal);
 

@@ -184,6 +184,15 @@ button:disabled {
     margin-bottom: 30px;
 }
 
+.topbar-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
 .eyebrow {
     margin: 0 0 9px;
     color: var(--accent);
@@ -713,12 +722,17 @@ textarea::placeholder {
         font-size: 24px;
     }
 
-    .topbar .primary-button {
-        min-height: 39px;
-        padding: 0 11px;
-        font-size: 11px;
-        white-space: nowrap;
-    }
+    .topbar-actions {
+    gap: 6px;
+}
+
+.topbar-actions .primary-button,
+.topbar-actions .secondary-button {
+    min-height: 36px;
+    padding: 0 9px;
+    font-size: 10px;
+    white-space: nowrap;
+}
 
     .welcome-card {
         min-height: 165px;
