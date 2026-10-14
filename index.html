@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <meta name="theme-color" content="#101114">
+<meta name="description" content="ThufaOS Personal Schedule Manager">
+
+<title>ThufaOS — Personal Planner</title>
+
+<link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./assets/apple-touch-icon.png">
+<link rel="manifest" href="./manifest.json">
+
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="app-container">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">
+                    <img src="./assets/icon.png" alt="ThufaOS Logo">
+                </div>
+                <div>
+                    <h2>ThufaOS</h2>
+                    <p>PERSONAL SPACE</p>
+                </div>
+            </div>
+
+            <nav class="navigation">
+                <button class="nav-item active" data-view="dashboard">
+                    <span>◫</span> Dashboard
+                </button>
+
+                <button class="nav-item" data-view="calendar">
+                    <span>▦</span> Calendar
+                </button>
+
+                <button class="nav-item" data-view="schedules">
+                    <span>☷</span> All Schedules
+                </button>
+            </nav>
+
+            <div class="sidebar-bottom">
+                <div class="profile-avatar">T</div>
+                <div>
+                    <strong>Thufa</strong>
+                    <p>Personal Workspace</p>
+                </div>
+            </div>
+        </aside>
+
+        <main class="main-content">
+
+            <header class="topbar">
+                <div>
+                    <p class="eyebrow">PERSONAL WORKSPACE</p>
+                    <h1 id="page-title">Dashboard</h1>
+                </div>
+
+                <button class="primary-button" id="open-add">
+                    <span>＋</span> Add Schedule
+                </button>
+            </header>
+
+            <section id="dashboard-view">
+
+                <div class="welcome-card">
+                    <div>
+                        <p id="greeting">WELCOME BACK</p>
+                        <h2 id="welcome-title">Let's plan your day.</h2>
+                        <p id="today-label">Your schedule, all in one place.</p>
+                    </div>
+
+                    <div class="welcome-decoration">
+                         <img src="./assets/icon.png" alt="" aria-hidden="true">
+                    </div>
+                </div>
+
+                <div class="stats-grid">
+
+                    <div class="stat-card">
+                        <p>Today's Events</p>
+                        <h3 id="today-count">0</h3>
+                        <span>Scheduled for today</span>
+                    </div>
+
+                    <div class="stat-card">
+                        <p>Upcoming</p>
+                        <h3 id="upcoming-count">0</h3>
+                        <span>Future events</span>
+                    </div>
+
+                    <div class="stat-card">
+                        <p>Categories</p>
+                        <h3 id="category-count">5</h3>
+                        <span>Available categories</span>
+                    </div>
+
+                </div>
+
+                <section class="section-block">
+
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">YOUR PLANNER</p>
+                            <h2>Today's Agenda</h2>
+                        </div>
+
+                        <button class="text-button" id="view-all">
+                            View all →
+                        </button>
+                    </div>
+
+                    <div id="today-agenda" class="agenda-list"></div>
+
+                </section>
+
+                <section class="section-block">
+
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">COMING UP</p>
+                            <h2>Upcoming Schedules</h2>
+                        </div>
+                    </div>
+
+                    <div id="upcoming-agenda" class="agenda-list"></div>
+
+                </section>
+
+            </section>
+
+            <section id="calendar-view" class="hidden">
+                <div class="section-heading calendar-heading">
+                    <button class="secondary-button" id="previous-week">
+                        ← Previous
+                    </button>
+
+                    <h2 id="week-label">This Week</h2>
+
+                    <button class="secondary-button" id="next-week">
+                        Next →
+                    </button>
+                </div>
+
+                <div id="week-grid" class="week-grid"></div>
+
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">SELECTED WEEK</p>
+                        <h2>Weekly Agenda</h2>
+                    </div>
+                </div>
+
+                <div id="week-agenda" class="agenda-list"></div>
+            </section>
+
+            <section id="schedules-view" class="hidden">
+                <div class="section-heading">
+                    <div>
+                        <p class="eyebrow">YOUR ACTIVITIES</p>
+                        <h2>All Schedules</h2>
+                    </div>
+
+                    <select id="category-filter" class="filter-select">
+                        <option value="all">All categories</option>
+                        <option value="Academic">Academic</option>
+                        <option value="TigaPlus Space">TigaPlus Space</option>
+                        <option value="PPIT">PPIT</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div id="all-agenda" class="agenda-list"></div>
+            </section>
+
+            <footer class="app-footer">
+                <span>THUFAOS</span>
+                <span>Personal Schedule Manager</span>
+            </footer>
+
+        </main>
+    </div>
+
+    <!-- Add/Edit Schedule Modal -->
+    <div id="schedule-modal" class="modal-overlay hidden">
+
+        <div class="modal-card">
+
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">PLAN SOMETHING</p>
+                    <h2 id="modal-title">Add Schedule</h2>
+                </div>
+
+                <button class="close-button" id="close-modal">×</button>
+            </div>
+
+            <form id="schedule-form">
+
+                <input type="hidden" id="schedule-id">
+
+                <label for="event-title">Event Name *</label>
+                <input
+                    type="text"
+                    id="event-title"
+                    placeholder="e.g. Structural Engineering"
+                    required
+                >
+
+                <div class="form-row">
+                    <div>
+                        <label for="event-date">Date *</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+
+                    <div>
+                        <label for="event-category">Category</label>
+                        <select id="event-category">
+                            <option value="Academic">Academic</option>
+                            <option value="TigaPlus Space">TigaPlus Space</option>
+                            <option value="PPIT">PPIT</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div>
+                        <label for="event-start">Start Time *</label>
+                        <input type="time" id="event-start" required>
+                    </div>
+
+                    <div>
+                        <label for="event-end">End Time *</label>
+                        <input type="time" id="event-end" required>
+                    </div>
+                </div>
+
+                <label for="event-location">Location</label>
+                <input
+                    type="text"
+                    id="event-location"
+                    placeholder="e.g. Building A, Room 301"
+                >
+
+                <label for="event-description">Notes</label>
+                <textarea
+                    id="event-description"
+                    rows="3"
+                    placeholder="Additional information..."
+                ></textarea>
+
+                <label for="event-reminder">Reminder</label>
+                <select id="event-reminder">
+                    <option value="0">At event time</option>
+                    <option value="5">5 minutes before</option>
+                    <option value="15" selected>15 minutes before</option>
+                    <option value="30">30 minutes before</option>
+                    <option value="60">1 hour before</option>
+                    <option value="1440">1 day before</option>
+                </select>
+
+                <div class="modal-actions">
+                    <button
+                        type="button"
+                        class="secondary-button"
+                        id="cancel-modal"
+                    >
+                        Cancel
+                    </button>
+
+                    <button type="submit" class="primary-button">
+                        Save Schedule
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
