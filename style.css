@@ -1699,3 +1699,106 @@ textarea:focus {
         max-width: none;
     }
 }
+
+
+/* Smart Agenda states */
+.agenda-card {
+    position: relative;
+    overflow: hidden;
+    transition: border-color 180ms ease, background 180ms ease, opacity 180ms ease, transform 180ms ease;
+}
+
+.agenda-card::before {
+    content: "";
+    position: absolute;
+    inset: 13px auto 13px 0;
+    width: 3px;
+    border-radius: 0 4px 4px 0;
+    background: transparent;
+}
+
+.agenda-card.agenda-past {
+    opacity: 0.62;
+}
+
+.agenda-card.agenda-past .agenda-time {
+    color: var(--muted);
+}
+
+.agenda-card.agenda-current {
+    border-color: rgba(184, 243, 107, 0.42);
+    background: linear-gradient(100deg, rgba(184,243,107,0.075), var(--surface) 45%);
+    box-shadow: 0 0 0 1px rgba(184,243,107,0.045), 0 8px 28px rgba(0,0,0,0.08);
+}
+
+.agenda-card.agenda-current::before {
+    background: var(--accent);
+}
+
+.agenda-card.agenda-upcoming:hover {
+    border-color: rgba(184,243,107,0.23);
+    transform: translateY(-1px);
+}
+
+.agenda-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    margin-bottom: 7px;
+}
+
+.agenda-title-row h3 {
+    margin: 0;
+}
+
+.agenda-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 7px;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.status-past {
+    color: var(--muted);
+    background: rgba(255,255,255,0.045);
+}
+
+.status-upcoming {
+    color: var(--muted);
+    background: rgba(255,255,255,0.035);
+}
+
+.status-current {
+    color: var(--accent);
+    background: rgba(184,243,107,0.105);
+}
+
+.status-pulse {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px rgba(184,243,107,0.09);
+    animation: agenda-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes agenda-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.42; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .agenda-card,
+    .agenda-card.agenda-upcoming:hover,
+    .status-pulse {
+        animation: none;
+        transition: none;
+        transform: none;
+    }
+}

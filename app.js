@@ -393,8 +393,24 @@ function renderAgendaList(container, items, emptyMessage, showToday = false) {
         return;
     }
 
-    container.innerHTML = items.map(event => `
-        <article class="agenda-card">
+    const now = new Date();
+
+    container.innerHTML = items.map(event => {
+        const startsAt = getScheduleDateTime(event, "start");
+        const endsAt = getScheduleDateTime(event, "end");
+        const status = endsAt <= now
+            ? "past"
+            : startsAt <= now && endsAt > now
+                ? "current"
+                : "upcoming";
+        const statusLabel = status === "past"
+            ? "Elapsed"
+            : status === "current"
+                ? "Happening now"
+                : "Upcoming";
+
+        return `
+        <article class="agenda-card agenda-${status}">
 
             <div class="agenda-time">
                 ${escapeHTML(formatTime(event.start))}
@@ -406,7 +422,13 @@ function renderAgendaList(container, items, emptyMessage, showToday = false) {
 
             <div class="agenda-details">
 
-                <h3>${escapeHTML(event.title)}</h3>
+                <div class="agenda-title-row">
+                    <h3>${escapeHTML(event.title)}</h3>
+                    <span class="agenda-status status-${status}">
+                        ${status === "current" ? '<span class="status-pulse"></span>' : ""}
+                        ${statusLabel}
+                    </span>
+                </div>
 
                 <p>
                     ${showToday ? "" :
@@ -460,7 +482,8 @@ function renderAgendaList(container, items, emptyMessage, showToday = false) {
             </div>
 
         </article>
-    `).join("");
+    `;
+    }).join("");
 }
 
 function startOfWeek(date) {
@@ -806,5 +829,10 @@ modal.addEventListener("click", event => {
 document.addEventListener("keydown", event => {
     if (event.key === "Escape") closeModal();
 });
+
+// Keep countdowns and agenda status labels in sync with the clock.
+window.setInterval(() => {
+    renderAll();
+}, 60 * 1000);
 
 renderAll();
