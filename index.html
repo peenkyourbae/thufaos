@@ -385,14 +385,6 @@
                 <div id="all-agenda" class="agenda-list"></div>
             </section>
 
-            <footer class="app-footer">
-                <span>THUFAOS</span>
-                <span>Personal Schedule Manager</span>
-            </footer>
-
-        </main>
-    </div>
-
             <section id="settings-view" class="hidden">
                 <div class="settings-intro">
                     <p class="eyebrow">PERSONALIZE YOUR WORKSPACE</p>
@@ -441,8 +433,29 @@
                         <div class="settings-info-row"><span>Storage health</span><strong id="storage-health">Checking…</strong></div>
                         <p class="settings-note">Browser data can be lost if site data is cleared. Regular JSON exports are recommended.</p>
                     </article>
+
+                    <article class="settings-card privacy-card">
+                        <div class="settings-card-title"><span class="settings-icon">🔒</span><div><h3>Privacy</h3><p>Understand where your information lives and control your local data.</p></div></div>
+                        <div class="settings-info-row"><span>Schedule storage</span><strong>On this device</strong></div>
+                        <div class="settings-info-row"><span>Server upload</span><strong>Not used by this app</strong></div>
+                        <p class="settings-note">Schedules and preferences are stored in this browser's local storage. They are not synced across devices. Anyone with access to this browser profile may be able to view them. Exported JSON backups are unencrypted, so keep them somewhere private.</p>
+                        <div class="settings-actions privacy-actions">
+                            <button type="button" class="danger-button" id="clear-schedules">Delete all schedules</button>
+                        </div>
+                        <p class="settings-note">Deletion cannot be undone unless you have a backup. This only removes schedules from this browser; it does not delete exported backup files.</p>
+                    </article>
                 </div>
             </section>
+
+            <footer class="app-footer">
+                <span>THUFAOS</span>
+                <span>Personal Schedule Manager</span>
+            </footer>
+
+        </main>
+    </div>
+
+
 
     <!-- Add/Edit Schedule Modal -->
     <div id="schedule-modal" class="modal-overlay hidden">

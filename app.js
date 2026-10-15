@@ -49,7 +49,7 @@ function applyPreferences() {
 }
 
 function formatTime(time) {
-    if (!time) return "";
+    if (!time) return "--:--";
     if ((preferences.timeFormat || "24") === "24") return time;
     const match = String(time).match(/^(\d{1,2}):(\d{2})$/);
     if (!match) return time;
@@ -193,16 +193,6 @@ function formatDate(dateString, options = {
     year: "numeric"
 }) {
     return parseLocalDate(dateString).toLocaleDateString("en-GB", options);
-}
-
-function formatTime(time) {
-    if (!time) return "--:--";
-
-    const [hours, minutes] = time.split(":").map(Number);
-    const suffix = hours >= 12 ? "PM" : "AM";
-    const displayHour = hours % 12 || 12;
-
-    return `${displayHour}:${String(minutes).padStart(2, "0")} ${suffix}`;
 }
 
 function escapeHTML(value = "") {
@@ -903,8 +893,10 @@ function renderAgendaList(container, items, emptyMessage, showToday = false) {
 function startOfWeek(date) {
     const result = new Date(date);
     const day = result.getDay();
+    const mondayFirst = preferences.weekStartsMonday !== false;
+    const offset = mondayFirst ? (day === 0 ? -6 : 1 - day) : -day;
 
-    result.setDate(result.getDate() + (day === 0 ? -6 : 1 - day));
+    result.setDate(result.getDate() + offset);
     result.setHours(0, 0, 0, 0);
 
     return result;
@@ -1271,19 +1263,21 @@ window.setInterval(() => {
 
 function renderSettingsStatus() {
     const count = Array.isArray(schedules) ? schedules.length : 0;
-    const countNode = $("#backup-schedule-count");
-    if (!countNode) return;
-    countNode.textContent = String(count);
-    $("#settings-schedule-count").textContent = String(count);
-    $("#last-backup-time").textContent = lastBackupExportedAt
+    const setText = (selector, value) => {
+        const node = $(selector);
+        if (node) node.textContent = value;
+    };
+    setText("#backup-schedule-count", String(count));
+    setText("#settings-schedule-count", String(count));
+    setText("#last-backup-time", lastBackupExportedAt
         ? new Date(lastBackupExportedAt).toLocaleString()
-        : "Not recorded";
-    $("#backup-status-title").textContent = lastBackupExportedAt
+        : "Not recorded");
+    setText("#backup-status-title", lastBackupExportedAt
         ? "A backup was exported"
-        : "No backup recorded yet";
-    $("#backup-status-caption").textContent = lastBackupExportedAt
+        : "No backup recorded yet");
+    setText("#backup-status-caption", lastBackupExportedAt
         ? "Export another copy after important changes."
-        : "Your schedules currently live in this browser.";
+        : "Your schedules currently live in this browser.");
     let health = "Available";
     try {
         localStorage.setItem("__thufaos_health_check", "1");
@@ -1291,7 +1285,7 @@ function renderSettingsStatus() {
     } catch {
         health = "Unavailable";
     }
-    $("#storage-health").textContent = health;
+    setText("#storage-health", health);
 }
 
 function initializeSettings() {
@@ -1322,6 +1316,29 @@ $("#week-start-monday").addEventListener("change", event => {
 });
 $("#settings-export").addEventListener("click", exportSchedules);
 $("#settings-import").addEventListener("click", () => $("#import-file").click());
+$("#clear-schedules").addEventListener("click", () => {
+    if (!schedules.length) {
+        showToast("There are no schedules to delete.");
+        return;
+    }
+    const firstConfirm = confirm(`Delete all ${schedules.length} schedules from this browser?\n\nThis cannot be undone unless you have exported a backup.`);
+    if (!firstConfirm) return;
+    const secondConfirm = prompt('Type DELETE to permanently remove all schedules from this browser.');
+    if (secondConfirm !== "DELETE") {
+        showToast("Deletion cancelled.");
+        return;
+    }
+    schedules = [];
+    try {
+        saveSchedules();
+        renderAll();
+        renderSettingsStatus();
+        showToast("All schedules were deleted from this browser.");
+    } catch (error) {
+        showToast("Could not delete schedules. Browser storage may be unavailable.");
+        console.error("Schedule deletion failed:", error);
+    }
+});
 
 $("#command-search").addEventListener("input", event => handleCommandSearch(event.target.value));
 $("#command-clear").addEventListener("click", () => {
