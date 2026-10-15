@@ -42,6 +42,10 @@
                 <button class="nav-item" data-view="schedules">
                     <span>☷</span> All Schedules
                 </button>
+
+                <button class="nav-item" data-view="settings">
+                    <span>⚙</span> Settings
+                </button>
             </nav>
 
             <div class="sidebar-bottom">
@@ -384,6 +388,57 @@
 
         </main>
     </div>
+
+            <section id="settings-view" class="hidden">
+                <div class="settings-intro">
+                    <p class="eyebrow">PERSONALIZE YOUR WORKSPACE</p>
+                    <h2>Settings & Data Safety</h2>
+                    <p>Manage your preferences and keep a reliable backup of your schedules.</p>
+                </div>
+
+                <div class="settings-grid">
+                    <article class="settings-card">
+                        <div class="settings-card-title"><span class="settings-icon">◐</span><div><h3>Appearance</h3><p>Choose how ThufaOS looks on this device.</p></div></div>
+                        <label class="settings-field" for="theme-preference">Theme</label>
+                        <select id="theme-preference" class="settings-select">
+                            <option value="dark">Dark — Premium</option>
+                            <option value="light">Light</option>
+                            <option value="system">Follow device</option>
+                        </select>
+                        <p class="settings-note">Theme preference is saved on this device.</p>
+                    </article>
+
+                    <article class="settings-card">
+                        <div class="settings-card-title"><span class="settings-icon">◷</span><div><h3>Calendar preferences</h3><p>Adjust how time is displayed.</p></div></div>
+                        <label class="settings-field" for="time-format">Time format</label>
+                        <select id="time-format" class="settings-select">
+                            <option value="24">24-hour (14:30)</option>
+                            <option value="12">12-hour (2:30 PM)</option>
+                        </select>
+                        <label class="settings-toggle"><span><strong>Start week on Monday</strong><small>Use Monday as the first day of the week.</small></span><input id="week-start-monday" type="checkbox" checked></label>
+                    </article>
+
+                    <article class="settings-card backup-card">
+                        <div class="settings-card-title"><span class="settings-icon">🛡</span><div><h3>Data safety</h3><p>Export a portable backup before changing devices or browsers.</p></div></div>
+                        <div class="backup-status-row"><span class="backup-status-dot"></span><div><strong id="backup-status-title">Backup status unknown</strong><small id="backup-status-caption">ThufaOS stores schedules in this browser.</small></div></div>
+                        <div class="backup-meta"><span>Schedules stored</span><strong id="backup-schedule-count">0</strong></div>
+                        <div class="backup-meta"><span>Last backup exported</span><strong id="last-backup-time">Not recorded</strong></div>
+                        <div class="settings-actions">
+                            <button type="button" class="primary-button" id="settings-export">Export backup</button>
+                            <button type="button" class="secondary-button" id="settings-import">Import backup</button>
+                        </div>
+                        <p class="settings-note">Export creates a JSON file; it does not upload data to a server. Keep a copy somewhere safe.</p>
+                    </article>
+
+                    <article class="settings-card">
+                        <div class="settings-card-title"><span class="settings-icon">ⓘ</span><div><h3>About this setup</h3><p>Local-first schedule storage.</p></div></div>
+                        <div class="settings-info-row"><span>Storage key</span><code>thufaos_schedules_v1</code></div>
+                        <div class="settings-info-row"><span>Schedules</span><strong id="settings-schedule-count">0</strong></div>
+                        <div class="settings-info-row"><span>Storage health</span><strong id="storage-health">Checking…</strong></div>
+                        <p class="settings-note">Browser data can be lost if site data is cleared. Regular JSON exports are recommended.</p>
+                    </article>
+                </div>
+            </section>
 
     <!-- Add/Edit Schedule Modal -->
     <div id="schedule-modal" class="modal-overlay hidden">

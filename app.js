@@ -5,6 +5,7 @@ const $ = (selector) => document.querySelector(selector);
 const dashboardView = $("#dashboard-view");
 const calendarView = $("#calendar-view");
 const schedulesView = $("#schedules-view");
+const settingsView = $("#settings-view");
 const modal = $("#schedule-modal");
 const form = $("#schedule-form");
 
@@ -13,6 +14,9 @@ let currentView = "dashboard";
 let weekOffset = 0;
 let selectedDate = dateKey(new Date());
 let toastTimer;
+const SETTINGS_KEY = "thufaos_preferences_v1";
+let preferences = loadPreferences();
+let lastBackupExportedAt = localStorage.getItem("thufaos_last_backup_exported_at") || "";
 
 const categories = [
     "Academic",
@@ -21,6 +25,37 @@ const categories = [
     "Personal",
     "Other"
 ];
+
+function loadPreferences() {
+    const defaults = { theme: "dark", timeFormat: "24", weekStartsMonday: true };
+    try {
+        return { ...defaults, ...(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}")) };
+    } catch {
+        return defaults;
+    }
+}
+
+function savePreferences() {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(preferences));
+}
+
+function applyPreferences() {
+    const theme = preferences.theme || "dark";
+    const resolved = theme === "system"
+        ? (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+        : theme;
+    document.documentElement.dataset.theme = resolved;
+    document.documentElement.dataset.timeFormat = preferences.timeFormat || "24";
+}
+
+function formatTime(time) {
+    if (!time) return "";
+    if ((preferences.timeFormat || "24") === "24") return time;
+    const match = String(time).match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return time;
+    const hour = Number(match[1]);
+    return `${hour % 12 || 12}:${match[2]} ${hour >= 12 ? "PM" : "AM"}`;
+}
 
 function loadSchedules() {
     try {
@@ -60,7 +95,10 @@ function exportSchedules() {
     link.click();
     link.remove();
 
+    lastBackupExportedAt = new Date().toISOString();
+    try { localStorage.setItem("thufaos_last_backup_exported_at", lastBackupExportedAt); } catch {}
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    renderSettingsStatus();
 
     showToast(`${schedules.length} schedules exported.`);
 }
@@ -593,6 +631,7 @@ function handleCommandSearch(value) {
         commandQuery = text;
     }
     renderCommandCenter();
+    renderSettingsStatus();
 }
 
 function getEventDurationMinutes(event) {
@@ -990,6 +1029,7 @@ function switchView(view) {
     dashboardView.classList.toggle("hidden", view !== "dashboard");
     calendarView.classList.toggle("hidden", view !== "calendar");
     schedulesView.classList.toggle("hidden", view !== "schedules");
+    settingsView.classList.toggle("hidden", view !== "settings");
 
     document.querySelectorAll(".nav-item").forEach(button => {
         button.classList.toggle(
@@ -1001,7 +1041,8 @@ function switchView(view) {
     const titles = {
         dashboard: "Dashboard",
         calendar: "Calendar",
-        schedules: "All Schedules"
+        schedules: "All Schedules",
+        settings: "Settings"
     };
 
     $("#page-title").textContent = titles[view];
@@ -1228,6 +1269,60 @@ window.setInterval(() => {
     renderAll();
 }, 60 * 1000);
 
+function renderSettingsStatus() {
+    const count = Array.isArray(schedules) ? schedules.length : 0;
+    const countNode = $("#backup-schedule-count");
+    if (!countNode) return;
+    countNode.textContent = String(count);
+    $("#settings-schedule-count").textContent = String(count);
+    $("#last-backup-time").textContent = lastBackupExportedAt
+        ? new Date(lastBackupExportedAt).toLocaleString()
+        : "Not recorded";
+    $("#backup-status-title").textContent = lastBackupExportedAt
+        ? "A backup was exported"
+        : "No backup recorded yet";
+    $("#backup-status-caption").textContent = lastBackupExportedAt
+        ? "Export another copy after important changes."
+        : "Your schedules currently live in this browser.";
+    let health = "Available";
+    try {
+        localStorage.setItem("__thufaos_health_check", "1");
+        localStorage.removeItem("__thufaos_health_check");
+    } catch {
+        health = "Unavailable";
+    }
+    $("#storage-health").textContent = health;
+}
+
+function initializeSettings() {
+    $("#theme-preference").value = preferences.theme || "dark";
+    $("#time-format").value = preferences.timeFormat || "24";
+    $("#week-start-monday").checked = preferences.weekStartsMonday !== false;
+    renderSettingsStatus();
+}
+
+$("#theme-preference").addEventListener("change", event => {
+    preferences.theme = event.target.value;
+    savePreferences();
+    applyPreferences();
+    showToast("Theme preference saved.");
+});
+$("#time-format").addEventListener("change", event => {
+    preferences.timeFormat = event.target.value;
+    savePreferences();
+    applyPreferences();
+    renderAll();
+    showToast("Time format updated.");
+});
+$("#week-start-monday").addEventListener("change", event => {
+    preferences.weekStartsMonday = event.target.checked;
+    savePreferences();
+    renderAll();
+    showToast("Calendar preference saved.");
+});
+$("#settings-export").addEventListener("click", exportSchedules);
+$("#settings-import").addEventListener("click", () => $("#import-file").click());
+
 $("#command-search").addEventListener("input", event => handleCommandSearch(event.target.value));
 $("#command-clear").addEventListener("click", () => {
     commandQuery = "";
@@ -1267,4 +1362,6 @@ $("#quick-add-form").addEventListener("submit", handleQuickAddSubmit);
 $("#quick-add-edit").addEventListener("click", () => useQuickAddDraft(true));
 $("#quick-add-confirm").addEventListener("click", () => useQuickAddDraft(false));
 
+applyPreferences();
+initializeSettings();
 renderAll();
