@@ -1,4 +1,4 @@
-const CACHE_NAME = "thufaos-shell-v1";
+const CACHE_NAME = "thufaos-shell-v2";
 const APP_SHELL = [
   "./",
   "./index.html",

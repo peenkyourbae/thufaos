@@ -1072,6 +1072,13 @@ function openModal(event = null) {
     $("#event-reminder").value =
         String(event?.reminder ?? 15);
 
+    const repeatSelect = $("#event-repeat");
+    repeatSelect.value = "none";
+    repeatSelect.disabled = Boolean(event);
+    $("#event-repeat-help").textContent = event
+        ? "This event is edited individually. Create a new schedule to start a repeating series."
+        : "Recurring schedules are created as separate events, so each date can be edited independently.";
+
     modal.classList.remove("hidden");
 
     setTimeout(() => $("#event-title").focus(), 50);
@@ -1079,6 +1086,56 @@ function openModal(event = null) {
 
 function closeModal() {
     modal.classList.add("hidden");
+}
+
+function addDaysToDateKey(dateString, days) {
+    const date = new Date(`${dateString}T12:00:00`);
+    date.setDate(date.getDate() + days);
+    return dateKey(date);
+}
+
+function buildRecurringOccurrences(baseSchedule, repeat) {
+    if (repeat === "none") return [baseSchedule];
+
+    const todayKey = dateKey(new Date());
+    const startDate = new Date(`${baseSchedule.date}T12:00:00`);
+    const groupId = crypto.randomUUID ? crypto.randomUUID() : `repeat-${Date.now()}`;
+    const rule = repeat;
+    const occurrences = [];
+    const horizonDays = repeat === "weekly" ? 84 : 30;
+    const totalDays = horizonDays + 1;
+
+    for (let offset = 0; offset < totalDays; offset++) {
+        const candidateDate = new Date(startDate);
+        candidateDate.setDate(startDate.getDate() + offset);
+        const weekday = candidateDate.getDay();
+        let include = false;
+
+        if (offset === 0) include = true;
+        else if (repeat === "daily") include = true;
+        else if (repeat === "weekdays") include = weekday >= 1 && weekday <= 5;
+        else if (repeat === "weekly") include = offset % 7 === 0;
+
+        if (!include) continue;
+        const occurrenceDate = dateKey(candidateDate);
+        const occurrence = {
+            ...baseSchedule,
+            id: offset === 0 ? baseSchedule.id : (crypto.randomUUID ? crypto.randomUUID() : `schedule-${Date.now()}-${offset}`),
+            date: occurrenceDate,
+            recurrenceGroupId: groupId,
+            recurrenceRule: rule,
+            completedAt: null,
+            createdAt: baseSchedule.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        occurrences.push(occurrence);
+    }
+    return occurrences;
+}
+
+function buildRecurrenceCountLabel(repeat, dateString) {
+    // The actual occurrence count is deterministic for the selected recurrence and horizon.
+    return buildRecurringOccurrences({ id: "preview", date: dateString, createdAt: new Date().toISOString() }, repeat).length;
 }
 
 function handleFormSubmit(event) {
@@ -1095,6 +1152,7 @@ function handleFormSubmit(event) {
     }
 
     const previous = schedules.find(item => item.id === id);
+    const repeat = id ? "none" : $("#event-repeat").value;
 
     const schedule = {
         id: id || (crypto.randomUUID
@@ -1110,6 +1168,8 @@ function handleFormSubmit(event) {
         reminder: Number($("#event-reminder").value),
         calendarEventId: previous?.calendarEventId || null,
         completedAt: previous?.completedAt || null,
+        recurrenceGroupId: previous?.recurrenceGroupId || null,
+        recurrenceRule: previous?.recurrenceRule || null,
         createdAt: previous?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
@@ -1127,7 +1187,8 @@ function handleFormSubmit(event) {
                 item.id === id ? schedule : item
             );
         } else {
-            schedules.push(schedule);
+            const occurrences = buildRecurringOccurrences(schedule, repeat);
+            schedules.push(...occurrences);
         }
 
         saveSchedules();
@@ -1139,7 +1200,12 @@ function handleFormSubmit(event) {
 
     closeModal();
     renderAll();
-    showToast(id ? "Schedule updated." : "Schedule saved.");
+    if (id) {
+        showToast("Schedule updated.");
+    } else {
+        const createdCount = repeat === "none" ? 1 : buildRecurrenceCountLabel(repeat, schedule.date);
+        showToast(repeat === "none" ? "Schedule saved." : `Repeating schedule created (${createdCount} dates).`);
+    }
 
 const [year, month, day] = schedule.date.split("-");
 

@@ -527,6 +527,15 @@
                     placeholder="Additional information..."
                 ></textarea>
 
+                <label for="event-repeat">Repeat</label>
+                <select id="event-repeat">
+                    <option value="none">Does not repeat</option>
+                    <option value="daily">Every day · next 30 days</option>
+                    <option value="weekdays">Every weekday · next 30 days</option>
+                    <option value="weekly">Every week · next 12 weeks</option>
+                </select>
+                <p class="repeat-help" id="event-repeat-help">Recurring schedules are created as separate events, so each date can be edited independently.</p>
+
                 <label for="event-reminder">Reminder</label>
                 <select id="event-reminder">
                     <option value="0">At event time</option>
