@@ -2629,3 +2629,97 @@ html[data-theme="light"] .planner-panel{border-color:#e8ece9}
 #intelligence-view .productivity-intelligence { margin-top: 22px; }
 #intelligence-view .smart-planner-card { margin-top: 22px; }
 #intelligence-view > .productivity-intelligence .section-heading { margin-bottom: 18px; }
+
+/* Productivity Hub polish: compact, scannable priority queue */
+#planner-priority-queue {
+    display: grid;
+    gap: 9px;
+    margin-top: 14px;
+}
+#planner-priority-queue .priority-queue-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 13px 15px;
+    border: 1px solid var(--border);
+    border-radius: 13px;
+    background: var(--card, rgba(255,255,255,.025));
+    transition: border-color .18s ease, transform .18s ease, background .18s ease;
+}
+#planner-priority-queue .priority-queue-item:hover {
+    border-color: rgba(143,207,69,.38);
+    transform: translateY(-1px);
+}
+#planner-priority-queue .priority-queue-main {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+#planner-priority-queue .priority-queue-main strong {
+    font-size: 13px;
+    line-height: 1.4;
+    font-weight: 650;
+    overflow-wrap: anywhere;
+}
+#planner-priority-queue .priority-queue-main small {
+    color: var(--muted);
+    font-size: 11px;
+    line-height: 1.5;
+}
+#planner-priority-queue .priority-queue-tags {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
+}
+#planner-priority-queue .priority-chip,
+#planner-priority-queue .energy-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 23px;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    font-size: 9px;
+    line-height: 1.2;
+    font-weight: 750;
+    letter-spacing: .045em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+#planner-priority-queue .priority-critical { color: #ff7777; background: rgba(255,85,85,.10); border-color: rgba(255,85,85,.24); }
+#planner-priority-queue .priority-high { color: #ffb36b; background: rgba(255,160,70,.10); border-color: rgba(255,160,70,.22); }
+#planner-priority-queue .priority-medium { color: var(--accent); background: rgba(143,207,69,.09); border-color: rgba(143,207,69,.22); }
+#planner-priority-queue .priority-low { color: var(--muted); background: rgba(128,128,128,.08); }
+#planner-priority-queue .energy-deep-work { color: #b9a6ff; background: rgba(151,120,255,.10); border-color: rgba(151,120,255,.22); }
+#planner-priority-queue .energy-normal { color: var(--muted); background: rgba(128,128,128,.08); }
+#planner-priority-queue .energy-light-task { color: #7edec3; background: rgba(76,205,170,.09); border-color: rgba(76,205,170,.2); }
+
+/* Compact settings switch: 34 x 18 px with a 12 px thumb */
+.settings-toggle input[type="checkbox"] {
+    width: 34px;
+    height: 18px;
+    min-width: 34px;
+    flex: 0 0 34px;
+    margin: 0 2px 0 12px;
+    border-radius: 999px;
+}
+.settings-toggle input[type="checkbox"]::before {
+    width: 12px;
+    height: 12px;
+    top: 2px;
+    left: 2px;
+}
+.settings-toggle input[type="checkbox"]:checked::before { transform: translateX(14px); }
+
+@media (max-width: 600px) {
+    #planner-priority-queue .priority-queue-item {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+    }
+    #planner-priority-queue .priority-queue-tags { justify-content: flex-start; }
+}
