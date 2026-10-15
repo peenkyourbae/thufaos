@@ -338,6 +338,165 @@ function renderDashboardIntelligence() {
 }
 
 
+
+let quickAddDraft = null;
+
+function parseClockToken(token) {
+    const normalized = token.toLowerCase().replace(/\./g, "").trim();
+    const match = normalized.match(/^(\d{1,2})(?::(\d{2}))?\s*(am|pm)?$/);
+    if (!match) return null;
+    let hour = Number(match[1]);
+    const minute = Number(match[2] || 0);
+    const meridiem = match[3];
+    if (minute > 59 || hour > 24 || (meridiem && (hour < 1 || hour > 12))) return null;
+    if (meridiem) {
+        if (hour === 12) hour = 0;
+        if (meridiem === "pm") hour += 12;
+    }
+    if (hour > 23 || (hour === 24 && minute !== 0)) return null;
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+}
+
+function parseNaturalSchedule(raw) {
+    const original = raw.trim();
+    if (!original) return null;
+
+    let remaining = original;
+    const now = new Date();
+    let date = new Date(now);
+    date.setHours(0, 0, 0, 0);
+
+    const dateRules = [
+        { re: /\bday after tomorrow\b/i, offset: 2 },
+        { re: /\btomorrow\b/i, offset: 1 },
+        { re: /\btoday\b/i, offset: 0 }
+    ];
+    let dateMatched = false;
+    for (const rule of dateRules) {
+        if (rule.re.test(remaining)) {
+            date.setDate(date.getDate() + rule.offset);
+            remaining = remaining.replace(rule.re, " ");
+            dateMatched = true;
+            break;
+        }
+    }
+
+    if (!dateMatched) {
+        const weekdayMatch = remaining.match(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i);
+        if (weekdayMatch) {
+            const days = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
+            const target = days[weekdayMatch[1].toLowerCase()];
+            let delta = (target - date.getDay() + 7) % 7;
+            if (delta === 0) delta = 7;
+            date.setDate(date.getDate() + delta);
+            remaining = remaining.replace(weekdayMatch[0], " ");
+        } else {
+            const explicit = remaining.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
+            if (explicit) {
+                date = new Date(Number(explicit[1]), Number(explicit[2]) - 1, Number(explicit[3]));
+                remaining = remaining.replace(explicit[0], " ");
+            } else {
+                const shortDate = remaining.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/);
+                if (shortDate) {
+                    let year = shortDate[3] ? Number(shortDate[3]) : now.getFullYear();
+                    if (year < 100) year += 2000;
+                    date = new Date(year, Number(shortDate[1]) - 1, Number(shortDate[2]));
+                    remaining = remaining.replace(shortDate[0], " ");
+                }
+            }
+        }
+    }
+
+    const timeRange = remaining.match(/\b(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)(?:\s*(?:-|–|—|to|until)\s*)(\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\b/i);
+    if (!timeRange) return { error: "I couldn't find a start and end time. Try “Meeting tomorrow 2pm to 3pm”." };
+    const start = parseClockToken(timeRange[1]);
+    const end = parseClockToken(timeRange[2]);
+    if (!start || !end || end <= start) return { error: "Please provide a valid time range where the end is later than the start." };
+
+    const timeText = timeRange[0];
+    remaining = remaining.replace(timeText, " ");
+
+    let category = "Academic";
+    const categories = ["Academic", "TigaPlus Space", "PPIT", "Personal", "Other"];
+    const categoryMatch = remaining.match(/\bcategory\s*[:=]?\s*([^,;]+)/i);
+    if (categoryMatch) {
+        const candidate = categoryMatch[1].trim();
+        const found = categories.find(item => item.toLowerCase() === candidate.toLowerCase());
+        if (!found) {
+            return { error: `“${candidate}” isn't an available category. Use: ${categories.join(", ")}.` };
+        }
+        category = found;
+        remaining = remaining.replace(categoryMatch[0], " ");
+    }
+
+    let location = "";
+    const locationMatch = remaining.match(/\b(?:at|location)\s*[:=]?\s*([^,;]+)/i);
+    if (locationMatch) {
+        location = locationMatch[1].trim();
+        remaining = remaining.replace(locationMatch[0], " ");
+    }
+
+    const title = remaining.replace(/[,\s]+/g, " ").trim().replace(/^[,;:\-]+|[,;:\-]+$/g, "");
+    if (!title) return { error: "I found the date and time, but not an event name. Add a title before the date or time." };
+
+    const dateKeyValue = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    return { title, date: dateKeyValue, start, end, category, location, reminder: 15 };
+}
+
+function showQuickAddPreview(draft) {
+    quickAddDraft = draft;
+    const preview = $("#quick-add-preview");
+    preview.classList.remove("hidden");
+    $("#quick-add-confidence").textContent = "Please review";
+    $("#quick-preview-title").textContent = draft.title;
+    $("#quick-preview-date").textContent = formatDate(draft.date, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    $("#quick-preview-time").textContent = `${formatTime(draft.start)} – ${formatTime(draft.end)}`;
+    $("#quick-preview-category").textContent = draft.category;
+    $("#quick-add-hint").textContent = draft.location ? `Location detected: ${draft.location}` : "Check the preview before using this schedule.";
+}
+
+function handleQuickAddSubmit(event) {
+    event.preventDefault();
+    const result = parseNaturalSchedule($("#quick-add-input").value);
+    if (!result) return;
+    if (result.error) {
+        $("#quick-add-hint").textContent = result.error;
+        $("#quick-add-preview").classList.add("hidden");
+        showToast("Could not parse schedule. Check the example format.");
+        return;
+    }
+    showQuickAddPreview(result);
+}
+
+function useQuickAddDraft(openForEditing = false) {
+    if (!quickAddDraft) return;
+    const draft = { ...quickAddDraft };
+    $("#quick-add-preview").classList.add("hidden");
+    $("#quick-add-input").value = "";
+    if (openForEditing) {
+        openModal();
+        $("#event-title").value = draft.title;
+        $("#event-date").value = draft.date;
+        $("#event-start").value = draft.start;
+        $("#event-end").value = draft.end;
+        $("#event-category").value = draft.category;
+        $("#event-location").value = draft.location;
+        $("#event-reminder").value = String(draft.reminder || 15);
+        showToast("Review the details, then save the schedule.");
+    } else {
+        // Fill the existing schedule form and submit through its normal validation/storage flow.
+        openModal();
+        $("#event-title").value = draft.title;
+        $("#event-date").value = draft.date;
+        $("#event-start").value = draft.start;
+        $("#event-end").value = draft.end;
+        $("#event-category").value = draft.category;
+        $("#event-location").value = draft.location;
+        $("#event-reminder").value = String(draft.reminder || 15);
+        showToast("Review the details, then tap Save Schedule.");
+    }
+}
+
 function getEventDurationMinutes(event) {
     const start = getScheduleDateTime(event, "start");
     let end = getScheduleDateTime(event, "end");
@@ -969,5 +1128,9 @@ document.addEventListener("keydown", event => {
 window.setInterval(() => {
     renderAll();
 }, 60 * 1000);
+
+$("#quick-add-form").addEventListener("submit", handleQuickAddSubmit);
+$("#quick-add-edit").addEventListener("click", () => useQuickAddDraft(true));
+$("#quick-add-confirm").addEventListener("click", () => useQuickAddDraft(false));
 
 renderAll();

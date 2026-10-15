@@ -162,6 +162,40 @@
                     </article>
                 </section>
 
+                <section class="quick-add-panel" aria-label="Quick Add Schedule">
+                    <div class="quick-add-heading">
+                        <div>
+                            <p class="eyebrow">QUICK ADD</p>
+                            <h2>Plan it in one line.</h2>
+                            <p>Describe an event naturally. ThufaOS will prepare the schedule form for you.</p>
+                        </div>
+                        <span class="quick-add-spark" aria-hidden="true">✳</span>
+                    </div>
+                    <form id="quick-add-form" class="quick-add-form">
+                        <input id="quick-add-input" type="text" autocomplete="off"
+                            placeholder="e.g. Meeting tomorrow 2pm to 3pm, category Work"
+                            aria-label="Describe a schedule in natural language" required>
+                        <button type="submit" class="primary-button" id="quick-add-submit">Parse schedule ↗</button>
+                    </form>
+                    <p class="quick-add-hint" id="quick-add-hint">Try: “Design review Friday 10:00–11:30, category TigaPlus Space”</p>
+                    <div class="quick-add-preview hidden" id="quick-add-preview" aria-live="polite">
+                        <div class="quick-add-preview-heading">
+                            <strong>Schedule preview</strong>
+                            <span id="quick-add-confidence">Review before saving</span>
+                        </div>
+                        <div class="quick-add-preview-grid">
+                            <div><span>EVENT</span><strong id="quick-preview-title">—</strong></div>
+                            <div><span>DATE</span><strong id="quick-preview-date">—</strong></div>
+                            <div><span>TIME</span><strong id="quick-preview-time">—</strong></div>
+                            <div><span>CATEGORY</span><strong id="quick-preview-category">—</strong></div>
+                        </div>
+                        <div class="quick-add-preview-actions">
+                            <button type="button" class="secondary-button" id="quick-add-edit">Edit details</button>
+                            <button type="button" class="primary-button" id="quick-add-confirm">Review & add</button>
+                        </div>
+                    </div>
+                </section>
+
                 <section class="productivity-intelligence" aria-label="Productivity insights">
                     <div class="section-heading intelligence-section-heading">
                         <div>
