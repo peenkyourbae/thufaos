@@ -182,8 +182,17 @@ function dateKey(date) {
 }
 
 function parseLocalDate(dateString) {
+    // Accept only a valid YYYY-MM-DD date; use today for missing/invalid legacy values.
+    if (typeof dateString !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        return new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    }
+
     const [year, month, day] = dateString.split("-").map(Number);
-    return new Date(year, month - 1, day);
+    const parsed = new Date(year, month - 1, day);
+    if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+        return new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    }
+    return parsed;
 }
 
 function formatDate(dateString, options = {
@@ -742,6 +751,28 @@ function renderProductivityIntelligence() {
         : "Your month at a glance.";
 }
 
+const PRIORITY_RANK = { critical: 0, high: 1, medium: 2, low: 3 };
+const PRIORITY_LABELS = { critical: "Critical", high: "High", medium: "Medium", low: "Low" };
+const ENERGY_LABELS = { deep: "Deep Work", normal: "Normal", light: "Light Task" };
+
+function getSchedulePriority(event) {
+    return Object.hasOwn(PRIORITY_RANK, event?.priority) ? event.priority : "medium";
+}
+
+function getScheduleEnergy(event) {
+    return Object.hasOwn(ENERGY_LABELS, event?.energy) ? event.energy : "normal";
+}
+
+function getEstimatedDuration(event) {
+    const value = Number(event?.estimatedMinutes);
+    return Number.isFinite(value) && value > 0 ? Math.min(1440, Math.round(value)) : getEventDurationMinutes(event);
+}
+
+function prioritySort(a, b) {
+    return PRIORITY_RANK[getSchedulePriority(a)] - PRIORITY_RANK[getSchedulePriority(b)]
+        || timeToMinutes(a.start) - timeToMinutes(b.start);
+}
+
 function plannerCategoryRank(category) {
     // A gentle default ordering, not a claim about the user's personal priorities.
     return ({ Academic: 1, "TigaPlus Space": 2, PPIT: 3, Personal: 4, Other: 5 })[category] || 6;
@@ -806,6 +837,31 @@ function renderSmartDailyPlanner() {
         <div class="planner-stat"><strong>${Math.floor(freeMinutes / 60)}h${freeMinutes % 60 ? ` ${freeMinutes % 60}m` : ""}</strong><span>open time · 07:00–22:00</span></div>
         <div class="planner-stat ${conflicts.size ? "planner-conflict" : "planner-upcoming"}"><strong>${conflicts.size}</strong><span>${conflictText}</span></div>`;
 
+    const priorityQueue = $("#planner-priority-queue");
+    if (priorityQueue) {
+        const actionable = dayEvents
+            .filter(event => !event.completedAt)
+            .sort(prioritySort)
+            .slice(0, 3);
+        priorityQueue.innerHTML = actionable.length
+            ? actionable.map(event => {
+                const priority = getSchedulePriority(event);
+                const energy = getScheduleEnergy(event);
+                const estimate = getEstimatedDuration(event);
+                return `<article class="priority-queue-item">
+                    <div class="priority-queue-main">
+                        <strong>${escapeHTML(event.title || "Untitled schedule")}</strong>
+                        <small>${formatTime(event.start)}–${formatTime(event.end)} · ${estimate} min estimated</small>
+                    </div>
+                    <div class="priority-queue-tags">
+                        <span class="priority-chip priority-${priority}">${PRIORITY_LABELS[priority]}</span>
+                        <span class="energy-chip energy-${energy}">${ENERGY_LABELS[energy]}</span>
+                    </div>
+                </article>`;
+            }).join("")
+            : '<div class="planner-empty-note">No unfinished schedules for this date. You can enjoy the space or add a task.</div>';
+    }
+
     if (!normalized.length) {
         flow.innerHTML = '<div class="planner-empty-note">Nothing is scheduled for this date yet. This is a clean slate—add your fixed commitments first, then use a suggested focus slot.</div>';
     } else {
@@ -815,7 +871,7 @@ function renderSmartDailyPlanner() {
             const stateClass = conflicts.has(event.id) ? "planner-conflict" : (state === "Past" ? "planner-past" : "");
             const rank = plannerCategoryRank(event.category);
             const categoryHint = rank <= 2 ? "Core work" : (rank === 3 ? "Coordination" : (rank === 4 ? "Personal time" : "Flexible"));
-            return `<div class="planner-flow-item ${stateClass}"><div class="planner-flow-time">${fmt(item.start)}<br>– ${fmt(item.end)}</div><div class="planner-flow-line" aria-hidden="true"></div><div class="planner-flow-copy"><strong>${escapeHTML(event.title || "Untitled schedule")}</strong><small>${escapeHTML(event.category || "Other")} · ${state}</small><span class="planner-priority-tag">${categoryHint}</span>${conflicts.has(event.id) ? '<span class="planner-priority-tag planner-conflict">Resolve overlap</span>' : ""}</div></div>`;
+            return `<div class="planner-flow-item ${stateClass}"><div class="planner-flow-time">${fmt(item.start)}<br>– ${fmt(item.end)}</div><div class="planner-flow-line" aria-hidden="true"></div><div class="planner-flow-copy"><strong>${escapeHTML(event.title || "Untitled schedule")}</strong><small>${escapeHTML(event.category || "Other")} · ${state}</small><div class="planner-flow-tags"><span class="planner-priority-tag">${categoryHint}</span><span class="priority-chip priority-${getSchedulePriority(event)}">${PRIORITY_LABELS[getSchedulePriority(event)]}</span><span class="energy-chip energy-${getScheduleEnergy(event)}">${ENERGY_LABELS[getScheduleEnergy(event)]}</span><span class="planner-estimate">${getEstimatedDuration(event)} min est.</span>${conflicts.has(event.id) ? '<span class="planner-priority-tag planner-conflict">Resolve overlap</span>' : ""}</div></div></div>`;
         }).join("");
     }
 
@@ -1127,18 +1183,53 @@ function renderAll() {
     renderCommandCenter();
 }
 
+function switchView(view) {
+    currentView = view;
+    dashboardView.classList.toggle("hidden", view !== "dashboard");
+    calendarView.classList.toggle("hidden", view !== "calendar");
+    schedulesView.classList.toggle("hidden", view !== "schedules");
+    settingsView.classList.toggle("hidden", view !== "settings");
+
+    document.querySelectorAll(".nav-item").forEach(button => {
+        button.classList.toggle("active", button.dataset.view === view);
+    });
+
+    const titles = {
+        dashboard: "Dashboard",
+        calendar: "Calendar",
+        schedules: "All Schedules",
+        settings: "Settings"
+    };
+    $("#page-title").textContent = titles[view] || "ThufaOS";
+    renderAll();
+}
+
+function timeToMinutes(value) {
+    const [hours, minutes] = String(value || "0:0").split(":").map(Number);
+    return (hours || 0) * 60 + (minutes || 0);
+}
+
+function minutesToTime(value) {
+    const normalized = ((Number(value) % 1440) + 1440) % 1440;
+    return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+}
+
 function getConflictSuggestions(target, limit = 3) {
     if (!target || !target.date) return [];
     const duration = getEventDurationMinutes(target);
     if (!duration || duration > 15 * 60) return [];
     const dayStart = 7 * 60;
     const dayEnd = 22 * 60;
-    const busy = schedules.filter(item => item.id !== target.id && item.date === target.date).map(item => {
-        const start = timeToMinutes(item.start);
-        let end = timeToMinutes(item.end);
-        if (end <= start) end += 1440;
-        return { start, end };
-    }).filter(item => item.end > dayStart && item.start < dayEnd).sort((a, b) => a.start - b.start);
+    const busy = schedules
+        .filter(item => item.id !== target.id && item.date === target.date)
+        .map(item => {
+            const start = timeToMinutes(item.start);
+            let end = timeToMinutes(item.end);
+            if (end <= start) end += 1440;
+            return { start, end };
+        })
+        .filter(item => item.end > dayStart && item.start < dayEnd)
+        .sort((a, b) => a.start - b.start);
     const originalStart = timeToMinutes(target.start);
     const results = [];
     for (let start = dayStart; start + duration <= dayEnd; start += 30) {
@@ -1149,15 +1240,6 @@ function getConflictSuggestions(target, limit = 3) {
         if (results.length >= limit) break;
     }
     return results;
-}
-
-function timeToMinutes(value) {
-    const [hours, minutes] = String(value || "0:0").split(":").map(Number);
-    return (hours || 0) * 60 + (minutes || 0);
-}
-
-function minutesToTime(value) {
-    return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
 }
 
 $("#overlap-list").addEventListener("click", event => {
@@ -1172,7 +1254,10 @@ $("#overlap-list").addEventListener("click", event => {
         if (!panel.hidden) { panel.hidden = true; return; }
         const suggestions = getConflictSuggestions(target);
         panel.hidden = false;
-        panel.innerHTML = suggestions.length ? `<p class="conflict-suggestion-label">Available alternatives · ${escapeHTML(target.title)}</p>` + suggestions.map(slot => `<button type="button" class="conflict-slot-button" data-action="conflict-move" data-id="${escapeHTML(target.id)}" data-start="${slot.start}" data-end="${slot.end}">${formatTime(slot.start)}–${formatTime(slot.end)} <span>Move here</span></button>`).join("") : '<p class="conflict-no-slots">No free 30-minute-aligned slot found between 07:00 and 22:00. Edit the schedule manually to explore other times.</p>';
+        panel.innerHTML = suggestions.length
+            ? `<p class="conflict-suggestion-label">Available alternatives · ${escapeHTML(target.title)}</p>` +
+              suggestions.map(slot => `<button type="button" class="conflict-slot-button" data-action="conflict-move" data-id="${escapeHTML(target.id)}" data-start="${slot.start}" data-end="${slot.end}">${formatTime(slot.start)}–${formatTime(slot.end)} <span>Move here</span></button>`).join("")
+            : '<p class="conflict-no-slots">No free 30-minute-aligned slot found between 07:00 and 22:00. Edit the schedule manually to explore other times.</p>';
         return;
     }
 
@@ -1181,12 +1266,17 @@ $("#overlap-list").addEventListener("click", event => {
         const end = button.dataset.end;
         const hasConflict = schedules.some(item => {
             if (item.id === target.id || item.date !== target.date) return false;
-            const a = timeToMinutes(item.start), bRaw = timeToMinutes(item.end);
-            const b = bRaw <= a ? bRaw + 1440 : bRaw;
-            const proposedStart = timeToMinutes(start), proposedEnd = timeToMinutes(end);
+            const a = timeToMinutes(item.start);
+            let b = timeToMinutes(item.end);
+            if (b <= a) b += 1440;
+            const proposedStart = timeToMinutes(start);
+            const proposedEnd = timeToMinutes(end);
             return proposedStart < b && a < proposedEnd;
         });
-        if (hasConflict) { showToast("That slot is no longer available. Find suggestions again."); return; }
+        if (hasConflict) {
+            showToast("That slot is no longer available. Find suggestions again.");
+            return;
+        }
         const approved = confirm(`Move only this occurrence of "${target.title}" to ${formatTime(start)}–${formatTime(end)} on ${formatDate(target.date)}?`);
         if (!approved) return;
         target.start = start;
@@ -1197,33 +1287,6 @@ $("#overlap-list").addEventListener("click", event => {
         showToast("Schedule moved to the selected free slot.");
     }
 });
-
-function switchView(view) {
-    currentView = view;
-    dashboardView.classList.toggle("hidden", view !== "dashboard");
-    calendarView.classList.toggle("hidden", view !== "calendar");
-    schedulesView.classList.toggle("hidden", view !== "schedules");
-    settingsView.classList.toggle("hidden", view !== "settings");
-
-    document.querySelectorAll(".nav-item").forEach(button => {
-        button.classList.toggle(
-            "active",
-            button.dataset.view === view
-        );
-    });
-
-    const titles = {
-        dashboard: "Dashboard",
-        calendar: "Calendar",
-        schedules: "All Schedules",
-        settings: "Settings"
-    };
-
-    $("#page-title").textContent = titles[view];
-
-    renderAll();
-}
-
 function openModal(event = null, plannerDraft = null) {
     form.reset();
 
@@ -1237,6 +1300,14 @@ function openModal(event = null, plannerDraft = null) {
     $("#event-start").value = event?.start || plannerDraft?.start || "09:00";
     $("#event-end").value = event?.end || plannerDraft?.end || "10:00";
     $("#event-category").value = event?.category || "Academic";
+    $("#event-priority").value = event?.priority || "medium";
+    $("#event-energy").value = event?.energy || "normal";
+    const durationSource = event || {
+        date: plannerDraft?.date || selectedDate || dateKey(new Date()),
+        start: plannerDraft?.start || "09:00",
+        end: plannerDraft?.end || "10:00"
+    };
+    $("#event-estimated-minutes").value = String(event?.estimatedMinutes || getEventDurationMinutes(durationSource) || 60);
     $("#event-location").value = event?.location || "";
     $("#event-description").value = event?.description || "";
 
@@ -1334,6 +1405,9 @@ function handleFormSubmit(event) {
         start,
         end,
         category: $("#event-category").value,
+        priority: $("#event-priority").value,
+        energy: $("#event-energy").value,
+        estimatedMinutes: Math.max(5, Math.min(1440, Number($("#event-estimated-minutes").value) || getEventDurationMinutes({ start, end }))),
         location: $("#event-location").value.trim(),
         description: $("#event-description").value.trim(),
         reminder: Number($("#event-reminder").value),
@@ -1380,6 +1454,9 @@ function handleFormSubmit(event) {
                     start: schedule.start,
                     end: schedule.end,
                     category: schedule.category,
+                    priority: schedule.priority,
+                    energy: schedule.energy,
+                    estimatedMinutes: schedule.estimatedMinutes,
                     location: schedule.location,
                     description: schedule.description,
                     reminder: schedule.reminder,
