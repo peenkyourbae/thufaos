@@ -5,8 +5,8 @@ const $ = (selector) => document.querySelector(selector);
 const dashboardView = $("#dashboard-view");
 const calendarView = $("#calendar-view");
 const schedulesView = $("#schedules-view");
-const intelligenceView = $("#intelligence-view");
 const settingsView = $("#settings-view");
+const intelligenceView = $("#intelligence-view");
 const modal = $("#schedule-modal");
 const form = $("#schedule-form");
 
@@ -183,15 +183,8 @@ function dateKey(date) {
 }
 
 function parseLocalDate(dateString) {
-    if (typeof dateString !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        return new Date();
-    }
     const [year, month, day] = dateString.split("-").map(Number);
-    const parsed = new Date(year, month - 1, day);
-    if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
-        return new Date();
-    }
-    return parsed;
+    return new Date(year, month - 1, day);
 }
 
 function formatDate(dateString, options = {
@@ -1187,8 +1180,8 @@ function switchView(view) {
     dashboardView.classList.toggle("hidden", view !== "dashboard");
     calendarView.classList.toggle("hidden", view !== "calendar");
     schedulesView.classList.toggle("hidden", view !== "schedules");
-    intelligenceView.classList.toggle("hidden", view !== "intelligence");
     settingsView.classList.toggle("hidden", view !== "settings");
+    intelligenceView.classList.toggle("hidden", view !== "intelligence");
 
     document.querySelectorAll(".nav-item").forEach(button => {
         button.classList.toggle("active", button.dataset.view === view);
