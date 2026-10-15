@@ -2613,3 +2613,60 @@ html[data-theme="light"] .secondary-button { background: rgba(32,35,30,.035); bo
 .conflict-slot-button:hover { border-color: var(--accent); }
 .conflict-slot-button span { color: var(--accent); font-size: 9px; white-space: nowrap; }
 .conflict-no-slots { margin: 2px 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+
+
+/* Smart Daily Planner */
+.smart-planner-card{margin:28px 0;padding:24px;border:1px solid var(--border-color,rgba(128,128,128,.2));border-radius:22px;background:var(--card-bg,rgba(255,255,255,.035));box-shadow:0 12px 32px rgba(0,0,0,.035)}
+.smart-planner-heading{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.smart-planner-heading h2{margin:4px 0 8px;font-size:clamp(1.35rem,2vw,1.75rem);letter-spacing:-.035em}.smart-planner-heading p:not(.eyebrow){margin:0;max-width:660px;color:var(--muted-text,#92949d);line-height:1.55;font-size:.92rem}.planner-sparkle{display:grid;place-items:center;width:42px;height:42px;flex:none;border-radius:14px;background:rgba(91,160,119,.14);color:#70bd8b;font-size:1.35rem}.smart-planner-controls{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:22px 0 16px}.smart-planner-controls label{display:flex;flex-direction:column;gap:7px;color:var(--muted-text,#92949d);font-size:.78rem;font-weight:650}.smart-planner-controls input,.smart-planner-controls select{min-height:40px;padding:8px 11px;border:1px solid var(--border-color,rgba(128,128,128,.25));border-radius:10px;background:var(--input-bg,transparent);color:var(--text-color,inherit);font:inherit}.smart-planner-summary{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}.planner-stat{display:flex;gap:8px;align-items:center;padding:10px 13px;border-radius:12px;background:rgba(128,128,128,.08);font-size:.82rem}.planner-stat strong{font-size:.98rem}.planner-stat span{color:var(--muted-text,#92949d)}.smart-planner-columns{display:grid;grid-template-columns:1fr 1fr;gap:14px}.planner-panel{min-width:0;padding:16px;border:1px solid var(--border-color,rgba(128,128,128,.16));border-radius:16px}.planner-panel-heading{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:12px}.planner-panel-heading h3{margin:0;font-size:.98rem}.planner-panel-heading>span{font-size:.62rem;letter-spacing:.08em;color:var(--muted-text,#92949d)}.planner-flow,.planner-open-slots{display:grid;gap:9px}.planner-flow-item{display:grid;grid-template-columns:74px 10px minmax(0,1fr);gap:10px;align-items:stretch;padding:10px 0}.planner-flow-time{font-size:.76rem;font-weight:700;white-space:nowrap;padding-top:2px}.planner-flow-line{position:relative;width:8px;border-radius:99px;background:rgba(100,160,120,.24)}.planner-flow-line:after{content:"";position:absolute;top:4px;left:1px;width:6px;height:6px;border-radius:50%;background:#6eb88a}.planner-flow-copy{min-width:0}.planner-flow-copy strong{display:block;overflow-wrap:anywhere;font-size:.86rem}.planner-flow-copy small{display:block;margin-top:4px;color:var(--muted-text,#92949d);font-size:.74rem}.planner-priority-tag{display:inline-block;margin:5px 5px 0 0;padding:3px 6px;border-radius:6px;background:rgba(100,160,120,.12);color:var(--muted-text,#92949d);font-size:.65rem}.planner-slot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--border-color,rgba(128,128,128,.17));border-radius:12px}.planner-slot strong{display:block;font-size:.84rem}.planner-slot small{display:block;margin-top:4px;color:var(--muted-text,#92949d);font-size:.73rem}.planner-slot .secondary-button{padding:7px 10px;min-height:32px;white-space:nowrap;font-size:.75rem}.planner-empty-note{padding:12px;border-radius:11px;background:rgba(128,128,128,.07);color:var(--muted-text,#92949d);font-size:.82rem;line-height:1.5}.planner-disclaimer{margin:14px 0 0;color:var(--muted-text,#92949d);font-size:.73rem;line-height:1.5}.planner-conflict{color:#d99b55}.planner-upcoming{color:#6eb88a}.planner-past{opacity:.66}
+@media(max-width:760px){.smart-planner-card{padding:17px;border-radius:17px}.smart-planner-columns{grid-template-columns:1fr}.smart-planner-controls{align-items:stretch}.smart-planner-controls label{flex:1;min-width:130px}.smart-planner-controls input,.smart-planner-controls select{width:100%;box-sizing:border-box}.planner-slot{align-items:flex-start}.planner-slot .secondary-button{white-space:normal}}
+html[data-theme="light"] .smart-planner-card{background:#fff;border-color:#e5e8e6;box-shadow:0 10px 28px rgba(24,45,32,.05)}
+html[data-theme="light"] .planner-panel{border-color:#e8ece9}
+
+/* ThufaOS compact settings toggle — override global input styles safely */
+.settings-toggle input[type="checkbox"] {
+    display: block !important;
+    flex: 0 0 36px !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    box-sizing: border-box !important;
+    padding: 0 !important;
+    margin: 0 2px 0 12px !important;
+    border-width: 1px !important;
+    border-radius: 999px !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    position: relative !important;
+    background: #777d75;
+    cursor: pointer;
+}
+.settings-toggle input[type="checkbox"]::before {
+    content: "" !important;
+    position: absolute !important;
+    width: 14px !important;
+    height: 14px !important;
+    min-width: 14px !important;
+    max-width: 14px !important;
+    top: 2px !important;
+    left: 2px !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+    background: #fff !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,.2) !important;
+    transform: translateX(0) !important;
+    transition: transform .18s ease !important;
+}
+.settings-toggle input[type="checkbox"]:checked {
+    background: #8fcf45 !important;
+    border-color: #8fcf45 !important;
+}
+.settings-toggle input[type="checkbox"]:checked::before {
+    transform: translateX(16px) !important;
+}
+.settings-toggle input[type="checkbox"]:focus-visible {
+    outline: 3px solid rgba(143,207,69,.3) !important;
+    outline-offset: 3px !important;
+}

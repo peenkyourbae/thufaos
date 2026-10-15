@@ -742,6 +742,104 @@ function renderProductivityIntelligence() {
         : "Your month at a glance.";
 }
 
+function plannerCategoryRank(category) {
+    // A gentle default ordering, not a claim about the user's personal priorities.
+    return ({ Academic: 1, "TigaPlus Space": 2, PPIT: 3, Personal: 4, Other: 5 })[category] || 6;
+}
+
+function renderSmartDailyPlanner() {
+    const dateInput = $("#planner-date");
+    const durationInput = $("#planner-focus-duration");
+    const date = dateInput?.value || dateKey(new Date());
+    const focusDuration = Math.max(30, Number(durationInput?.value || 60));
+    const dayEvents = getSortedSchedules(schedules.filter(item => item.date === date));
+    const flow = $("#planner-flow");
+    const slotsContainer = $("#planner-open-slots");
+    const summary = $("#planner-summary");
+    if (!flow || !slotsContainer || !summary) return;
+
+    const normalized = dayEvents.map(event => {
+        const start = timeToMinutes(event.start);
+        let end = timeToMinutes(event.end);
+        if (end <= start) end += 1440;
+        return { event, start, end };
+    }).sort((a, b) => a.start - b.start);
+
+    const conflicts = new Set();
+    for (let i = 0; i < normalized.length; i++) {
+        for (let k = i + 1; k < normalized.length; k++) {
+            if (normalized[k].start >= normalized[i].end) break;
+            if (normalized[i].start < normalized[k].end && normalized[k].start < normalized[i].end) {
+                conflicts.add(normalized[i].event.id);
+                conflicts.add(normalized[k].event.id);
+            }
+        }
+    }
+
+    const busy = normalized.map(item => ({ start: Math.max(7 * 60, item.start), end: Math.min(22 * 60, item.end) }))
+        .filter(item => item.end > item.start).sort((a, b) => a.start - b.start);
+    const merged = [];
+    busy.forEach(item => {
+        const last = merged[merged.length - 1];
+        if (last && item.start <= last.end) last.end = Math.max(last.end, item.end);
+        else merged.push({ ...item });
+    });
+    const freeSlots = [];
+    let cursor = 7 * 60;
+    merged.forEach(item => {
+        if (item.start - cursor >= focusDuration) freeSlots.push({ start: cursor, end: item.start, minutes: item.start - cursor });
+        cursor = Math.max(cursor, item.end);
+    });
+    if (22 * 60 - cursor >= focusDuration) freeSlots.push({ start: cursor, end: 22 * 60, minutes: 22 * 60 - cursor });
+
+    const fmt = mins => formatTime(`${String(Math.floor((mins % 1440) / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`);
+    const totalScheduled = normalized.reduce((sum, item) => sum + Math.max(0, item.end - item.start), 0);
+    const freeMinutes = Math.max(0, 15 * 60 - merged.reduce((sum, item) => sum + item.end - item.start, 0));
+    const isToday = date === dateKey(new Date());
+    const currentMinutes = new Date().getHours() * 60 + new Date().getMinutes();
+    const upcoming = normalized.find(item => item.end > (isToday ? currentMinutes : 0));
+    const conflictText = conflicts.size ? `${conflicts.size} events involved in conflicts` : "No overlaps detected";
+
+    summary.innerHTML = `
+        <div class="planner-stat"><strong>${dayEvents.length}</strong><span>scheduled events</span></div>
+        <div class="planner-stat"><strong>${Math.floor(totalScheduled / 60)}h${totalScheduled % 60 ? ` ${totalScheduled % 60}m` : ""}</strong><span>booked time</span></div>
+        <div class="planner-stat"><strong>${Math.floor(freeMinutes / 60)}h${freeMinutes % 60 ? ` ${freeMinutes % 60}m` : ""}</strong><span>open time · 07:00–22:00</span></div>
+        <div class="planner-stat ${conflicts.size ? "planner-conflict" : "planner-upcoming"}"><strong>${conflicts.size}</strong><span>${conflictText}</span></div>`;
+
+    if (!normalized.length) {
+        flow.innerHTML = '<div class="planner-empty-note">Nothing is scheduled for this date yet. This is a clean slate—add your fixed commitments first, then use a suggested focus slot.</div>';
+    } else {
+        flow.innerHTML = normalized.map((item, index) => {
+            const event = item.event;
+            const state = conflicts.has(event.id) ? "Conflict · review" : (isToday && item.end <= currentMinutes ? "Past" : (isToday && item.start <= currentMinutes ? "In progress" : "Scheduled"));
+            const stateClass = conflicts.has(event.id) ? "planner-conflict" : (state === "Past" ? "planner-past" : "");
+            const rank = plannerCategoryRank(event.category);
+            const categoryHint = rank <= 2 ? "Core work" : (rank === 3 ? "Coordination" : (rank === 4 ? "Personal time" : "Flexible"));
+            return `<div class="planner-flow-item ${stateClass}"><div class="planner-flow-time">${fmt(item.start)}<br>– ${fmt(item.end)}</div><div class="planner-flow-line" aria-hidden="true"></div><div class="planner-flow-copy"><strong>${escapeHTML(event.title || "Untitled schedule")}</strong><small>${escapeHTML(event.category || "Other")} · ${state}</small><span class="planner-priority-tag">${categoryHint}</span>${conflicts.has(event.id) ? '<span class="planner-priority-tag planner-conflict">Resolve overlap</span>' : ""}</div></div>`;
+        }).join("");
+    }
+
+    const suggested = freeSlots.filter(slot => slot.minutes >= focusDuration)
+        .sort((a, b) => (b.minutes - a.minutes) || (a.start - b.start)).slice(0, 3)
+        .sort((a, b) => a.start - b.start);
+    if (!suggested.length) {
+        slotsContainer.innerHTML = `<div class="planner-empty-note">No uninterrupted ${focusDuration}-minute slot was found between 07:00 and 22:00. Try a shorter focus block, or review overlaps to free up time.</div>`;
+    } else {
+        slotsContainer.innerHTML = suggested.map(slot => {
+            const rawTime = mins => `${String(Math.floor((mins % 1440) / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
+            return `<div class="planner-slot"><div><strong>${fmt(slot.start)}–${fmt(slot.end)}</strong><small>${Math.floor(slot.minutes / 60)}h${slot.minutes % 60 ? ` ${slot.minutes % 60}m` : ""} available · ${focusDuration}-min block fits</small></div><button type="button" class="secondary-button" data-planner-action="add-focus" data-date="${escapeHTML(date)}" data-start="${rawTime(slot.start)}" data-end="${rawTime(slot.start + focusDuration)}">Plan focus</button></div>`;
+        }).join("");
+    }
+    if (upcoming) {
+        const nextLabel = upcoming.start < currentMinutes && isToday ? "currently underway" : "coming up";
+        const hint = conflicts.size ? "Review conflicting events before committing to extra work." : `Keep a small transition buffer before ${upcoming.event.title}.`;
+        const note = document.createElement("div");
+        note.className = "planner-empty-note";
+        note.textContent = `Next ${nextLabel}: ${upcoming.event.title}. ${hint}`;
+        slotsContainer.appendChild(note);
+    }
+}
+
 function renderDashboard() {
     const now = new Date();
     const today = dateKey(now);
@@ -768,6 +866,7 @@ function renderDashboard() {
     $("#category-count").textContent = categories.length;
     renderDashboardIntelligence();
     renderProductivityIntelligence();
+    renderSmartDailyPlanner();
 
     renderAgendaList(
         $("#today-agenda"),
@@ -1028,15 +1127,7 @@ function renderAll() {
     renderCommandCenter();
 }
 
-function switchView(view) {
-    currentView = view;
-
-    dashboardView.classList.toggle("hidden", view !== "dashboard");
-    calendarView.classList.toggle("hidden", view !== "calendar");
-    schedulesView.classList.toggle("hidden", view !== "schedules");
-    settingsView.classList.toggle("hidden", view !== "settings");
-
-    function getConflictSuggestions(target, limit = 3) {
+function getConflictSuggestions(target, limit = 3) {
     if (!target || !target.date) return [];
     const duration = getEventDurationMinutes(target);
     if (!duration || duration > 15 * 60) return [];
@@ -1107,7 +1198,14 @@ $("#overlap-list").addEventListener("click", event => {
     }
 });
 
-document.querySelectorAll(".nav-item").forEach(button => {
+function switchView(view) {
+    currentView = view;
+    dashboardView.classList.toggle("hidden", view !== "dashboard");
+    calendarView.classList.toggle("hidden", view !== "calendar");
+    schedulesView.classList.toggle("hidden", view !== "schedules");
+    settingsView.classList.toggle("hidden", view !== "settings");
+
+    document.querySelectorAll(".nav-item").forEach(button => {
         button.classList.toggle(
             "active",
             button.dataset.view === view
@@ -1126,7 +1224,7 @@ document.querySelectorAll(".nav-item").forEach(button => {
     renderAll();
 }
 
-function openModal(event = null) {
+function openModal(event = null, plannerDraft = null) {
     form.reset();
 
     $("#schedule-id").value = event?.id || "";
@@ -1134,10 +1232,10 @@ function openModal(event = null) {
     $("#modal-title").textContent =
         event ? "Edit Schedule" : "Add Schedule";
 
-    $("#event-title").value = event?.title || "";
-    $("#event-date").value = event?.date || selectedDate;
-    $("#event-start").value = event?.start || "09:00";
-    $("#event-end").value = event?.end || "10:00";
+    $("#event-title").value = event?.title || plannerDraft?.title || "";
+    $("#event-date").value = event?.date || plannerDraft?.date || selectedDate;
+    $("#event-start").value = event?.start || plannerDraft?.start || "09:00";
+    $("#event-end").value = event?.end || plannerDraft?.end || "10:00";
     $("#event-category").value = event?.category || "Academic";
     $("#event-location").value = event?.location || "";
     $("#event-description").value = event?.description || "";
@@ -1580,6 +1678,21 @@ document.addEventListener("keydown", event => {
 $("#quick-add-form").addEventListener("submit", handleQuickAddSubmit);
 $("#quick-add-edit").addEventListener("click", () => useQuickAddDraft(true));
 $("#quick-add-confirm").addEventListener("click", () => useQuickAddDraft(false));
+
+$("#planner-date").value = dateKey(new Date());
+$("#planner-date").addEventListener("change", renderSmartDailyPlanner);
+$("#planner-focus-duration").addEventListener("change", renderSmartDailyPlanner);
+$("#planner-refresh").addEventListener("click", renderSmartDailyPlanner);
+$("#planner-open-slots").addEventListener("click", event => {
+    const button = event.target.closest('[data-planner-action="add-focus"]');
+    if (!button) return;
+    const date = button.dataset.date;
+    const start = button.dataset.start;
+    const end = button.dataset.end;
+    selectedDate = date;
+    openModal(null, { date, start, end, title: "Focus block" });
+    $("#event-category").value = "Academic";
+});
 
 applyPreferences();
 initializeSettings();

@@ -290,6 +290,34 @@
                     </div>
                 </section>
 
+                <section class="smart-planner-card" aria-labelledby="smart-planner-title">
+                    <div class="smart-planner-heading">
+                        <div>
+                            <p class="eyebrow">PLAN WITH INTENTION</p>
+                            <h2 id="smart-planner-title">Smart Daily Planner</h2>
+                            <p>Review your day, spot open time, and choose a focus block. Nothing changes until you confirm it.</p>
+                        </div>
+                        <span class="planner-sparkle" aria-hidden="true">✦</span>
+                    </div>
+                    <div class="smart-planner-controls">
+                        <label for="planner-date">Plan for <input type="date" id="planner-date"></label>
+                        <label for="planner-focus-duration">Focus block <select id="planner-focus-duration"><option value="30">30 minutes</option><option value="60" selected>60 minutes</option><option value="90">90 minutes</option><option value="120">2 hours</option></select></label>
+                        <button type="button" class="secondary-button" id="planner-refresh">Refresh plan</button>
+                    </div>
+                    <div class="smart-planner-summary" id="planner-summary" aria-live="polite"></div>
+                    <div class="smart-planner-columns">
+                        <div class="planner-panel">
+                            <div class="planner-panel-heading"><h3>Recommended flow</h3><span>TIME + CATEGORY</span></div>
+                            <div id="planner-flow" class="planner-flow"><p class="productivity-empty">Loading your day…</p></div>
+                        </div>
+                        <div class="planner-panel">
+                            <div class="planner-panel-heading"><h3>Focus opportunities</h3><span>OPEN TIME</span></div>
+                            <div id="planner-open-slots" class="planner-open-slots"><p class="productivity-empty">Finding available time…</p></div>
+                        </div>
+                    </div>
+                    <p class="planner-disclaimer">Suggestions are based on your saved schedules and available gaps. Existing events are never moved automatically.</p>
+                </section>
+
                 <section class="section-block">
 
                     <div class="section-heading">
