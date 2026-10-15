@@ -1183,9 +1183,38 @@ function handleFormSubmit(event) {
 
     try {
         if (id) {
-            schedules = schedules.map(item =>
-                item.id === id ? schedule : item
-            );
+            let scope = "one";
+            if (previous?.recurrenceGroupId) {
+                const choice = prompt(
+                    "This schedule belongs to a repeating series.\n\nApply changes to: \n1 = This occurrence only\n2 = This and future occurrences\n3 = Entire series\n\nEnter 1, 2, or 3:",
+                    "1"
+                );
+                if (choice === null) return;
+                if (!["1", "2", "3"].includes(choice.trim())) {
+                    showToast("Invalid choice. Changes were not saved.");
+                    return;
+                }
+                scope = ({ "1": "one", "2": "future", "3": "all" })[choice.trim()];
+            }
+
+            schedules = schedules.map(item => {
+                if (item.id === id) return schedule;
+                if (!previous?.recurrenceGroupId || item.recurrenceGroupId !== previous.recurrenceGroupId) return item;
+                const inScope = scope === "all" || (scope === "future" && item.date >= previous.date);
+                if (!inScope) return item;
+                // Keep each occurrence's own date, ID, completion state and external calendar link.
+                return {
+                    ...item,
+                    title: schedule.title,
+                    start: schedule.start,
+                    end: schedule.end,
+                    category: schedule.category,
+                    location: schedule.location,
+                    description: schedule.description,
+                    reminder: schedule.reminder,
+                    updatedAt: new Date().toISOString()
+                };
+            });
         } else {
             const occurrences = buildRecurringOccurrences(schedule, repeat);
             schedules.push(...occurrences);
@@ -1201,7 +1230,7 @@ function handleFormSubmit(event) {
     closeModal();
     renderAll();
     if (id) {
-        showToast("Schedule updated.");
+        showToast(previous?.recurrenceGroupId ? "Schedule series updated." : "Schedule updated.");
     } else {
         const createdCount = repeat === "none" ? 1 : buildRecurrenceCountLabel(repeat, schedule.date);
         showToast(repeat === "none" ? "Schedule saved." : `Repeating schedule created (${createdCount} dates).`);
@@ -1262,18 +1291,32 @@ function handleAgendaAction(event) {
     }
 
     if (action === "delete") {
-        const confirmed = confirm(
-            `Delete "${schedule.title}"?`
-        );
+        let scope = "one";
+        if (schedule.recurrenceGroupId) {
+            const choice = prompt(
+                `"${schedule.title}" belongs to a repeating series.\n\nDelete: \n1 = This occurrence only\n2 = This and future occurrences\n3 = Entire series\n\nEnter 1, 2, or 3:`,
+                "1"
+            );
+            if (choice === null) return;
+            if (!["1", "2", "3"].includes(choice.trim())) {
+                showToast("Invalid choice. Nothing was deleted.");
+                return;
+            }
+            scope = ({ "1": "one", "2": "future", "3": "all" })[choice.trim()];
+        } else if (!confirm(`Delete "${schedule.title}"?`)) {
+            return;
+        }
 
-        if (!confirmed) return;
-
-        schedules = schedules.filter(item => item.id !== id);
+        schedules = schedules.filter(item => {
+            if (scope === "one") return item.id !== id;
+            if (item.recurrenceGroupId !== schedule.recurrenceGroupId) return true;
+            if (scope === "all") return false;
+            return item.date < schedule.date;
+        });
 
         saveSchedules();
         renderAll();
-
-        showToast("Schedule deleted.");
+        showToast(scope === "one" ? "Schedule deleted." : scope === "future" ? "This and future occurrences deleted." : "Entire repeating series deleted.");
     }
 }
 
