@@ -1802,3 +1802,158 @@ textarea:focus {
         transform: none;
     }
 }
+
+
+/* Calendar Intelligence */
+.calendar-insights {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin: -13px 0 36px;
+}
+
+.calendar-insight {
+    display: grid;
+    align-content: start;
+    gap: 7px;
+    min-width: 0;
+    padding: 17px 18px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012));
+}
+
+.insight-label {
+    color: var(--muted);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.calendar-insight strong {
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 25px;
+    letter-spacing: -0.055em;
+    line-height: 1.15;
+}
+
+.insight-caption {
+    color: var(--muted);
+    font-size: 10px;
+}
+
+.day-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0;
+    transition: border-color 180ms ease, background 180ms ease, transform 180ms ease;
+}
+
+.day-card:hover {
+    border-color: rgba(184,243,107,0.27);
+    transform: translateY(-2px);
+}
+
+.day-card .day-card-weekday {
+    font-size: 11px;
+}
+
+.day-card strong {
+    margin-top: 8px;
+}
+
+.day-load-meter {
+    display: flex;
+    width: 30px;
+    height: 23px;
+    align-items: end;
+    justify-content: center;
+    margin-top: 6px;
+}
+
+.day-load-meter > span {
+    display: block;
+    width: 22px;
+    min-height: 3px;
+    border-radius: 4px 4px 2px 2px;
+    background: rgba(184,243,107,0.28);
+}
+
+.day-card.load-medium .day-load-meter > span,
+.day-card.load-high .day-load-meter > span {
+    background: var(--accent);
+}
+
+.day-card.is-today:not(.selected) {
+    border-color: rgba(184,243,107,0.3);
+}
+
+.day-card.is-today .day-card-weekday {
+    color: var(--accent);
+}
+
+.day-card small {
+    margin-top: 7px;
+    font-size: 9px;
+}
+
+@media (max-width: 700px) {
+    .week-grid {
+        gap: 5px;
+    }
+
+    .day-card {
+        min-height: 103px;
+        padding: 11px 2px;
+        border-radius: 10px;
+    }
+
+    .day-card .day-card-weekday {
+        font-size: 9px;
+    }
+
+    .day-card strong {
+        font-size: 17px;
+    }
+
+    .day-card small {
+        font-size: 8px;
+    }
+
+    .calendar-insights {
+        gap: 7px;
+        margin-top: -16px;
+    }
+
+    .calendar-insight {
+        padding: 12px 10px;
+        border-radius: 11px;
+    }
+
+    .calendar-insight strong {
+        font-size: 21px;
+    }
+
+    .insight-label {
+        font-size: 8px;
+    }
+
+    .insight-caption {
+        font-size: 9px;
+        line-height: 1.4;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .day-card {
+        transition: none;
+    }
+
+    .day-card:hover {
+        transform: none;
+    }
+}

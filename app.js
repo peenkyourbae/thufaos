@@ -529,37 +529,54 @@ function renderCalendar() {
     $("#week-grid").innerHTML = week.map(date => {
         const key = dateKey(date);
 
-        const count = schedules.filter(
-            event => event.date === key
-        ).length;
-
+        const count = schedules.filter(event => event.date === key).length;
         const selected = key === selectedDate;
+        const maxVisibleCount = Math.max(1, ...getVisibleWeek().map(day =>
+            schedules.filter(event => event.date === dateKey(day)).length
+        ));
+        const intensity = count === 0 ? "load-none" :
+            count >= maxVisibleCount * 0.75 ? "load-high" :
+            count >= maxVisibleCount * 0.4 ? "load-medium" : "load-low";
+        const barHeight = count === 0 ? 3 : Math.max(7, Math.round((count / maxVisibleCount) * 22));
 
         return `
             <button
-                class="day-card ${selected ? "selected" : ""}"
+                class="day-card ${selected ? "selected" : ""} ${key === today ? "is-today" : ""} ${intensity}"
                 data-date="${key}"
+                aria-label="${date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}, ${count} event${count === 1 ? "" : "s"}"
             >
-                ${date.toLocaleDateString("en-GB", {
-                    weekday: "short"
-                })}
-
+                <span class="day-card-weekday">${date.toLocaleDateString("en-GB", { weekday: "short" })}</span>
                 <strong>${date.getDate()}</strong>
-
+                <span class="day-load-meter" aria-hidden="true"><span style="height:${barHeight}px"></span></span>
                 <small>
                     ${key === today ? "Today" :
                     count ? `${count} event${count > 1 ? "s" : ""}` :
-                    "—"}
+                    "Free"}
                 </small>
             </button>
         `;
     }).join("");
 
     const weekDates = new Set(week.map(dateKey));
-
     const weeklyEvents = getSortedSchedules(
         schedules.filter(event => weekDates.has(event.date))
     );
+
+    // Calendar Intelligence for the currently visible week.
+    const counts = week.map(date => schedules.filter(event => event.date === dateKey(date)).length);
+    const total = counts.reduce((sum, count) => sum + count, 0);
+    const maxCount = Math.max(0, ...counts);
+    const busiestIndex = counts.findIndex(count => count === maxCount);
+    const freeDays = counts.filter(count => count === 0).length;
+
+    $("#calendar-week-total").textContent = String(total);
+    $("#calendar-busiest-day").textContent = maxCount
+        ? week[busiestIndex].toLocaleDateString("en-GB", { weekday: "short" })
+        : "—";
+    $("#calendar-busiest-count").textContent = maxCount
+        ? `${maxCount} event${maxCount === 1 ? "" : "s"} scheduled`
+        : "No events yet";
+    $("#calendar-free-days").textContent = String(freeDays);
 
     renderAgendaList(
         $("#week-agenda"),
