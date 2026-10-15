@@ -337,6 +337,123 @@ function renderDashboardIntelligence() {
         : "A little space for everything.";
 }
 
+
+function getEventDurationMinutes(event) {
+    const start = getScheduleDateTime(event, "start");
+    let end = getScheduleDateTime(event, "end");
+    if (end <= start) end = new Date(end.getTime() + 24 * 60 * 60 * 1000);
+    return Math.max(0, (end - start) / 60000);
+}
+
+function renderProductivityIntelligence() {
+    const now = new Date();
+    const today = dateKey(now);
+    const todayEvents = getSortedSchedules(schedules.filter(event => event.date === today));
+    const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const monthEvents = schedules.filter(event => String(event.date || "").startsWith(monthKey));
+    const monthName = now.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+
+    $("#monthly-period-label").textContent = now.toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+    $("#monthly-title").textContent = monthName;
+
+    // Time distribution is calculated from scheduled duration, grouped by category.
+    const categoryTotals = new Map();
+    monthEvents.forEach(event => {
+        const category = event.category || "Uncategorized";
+        categoryTotals.set(category, (categoryTotals.get(category) || 0) + getEventDurationMinutes(event));
+    });
+    const distribution = [...categoryTotals.entries()].sort((a, b) => b[1] - a[1]);
+    const totalMinutes = distribution.reduce((sum, item) => sum + item[1], 0);
+    const distributionContainer = $("#time-distribution");
+
+    if (!distribution.length || totalMinutes <= 0) {
+        distributionContainer.innerHTML = '<p class="productivity-empty">Add schedules to see your time distribution.</p>';
+    } else {
+        distributionContainer.innerHTML = distribution.slice(0, 5).map(([category, minutes]) => {
+            const percent = Math.round(minutes / totalMinutes * 100);
+            const hours = minutes / 60;
+            return `<div class="distribution-row">
+                <div class="distribution-label-row"><span>${escapeHTML(category)}</span><span>${hours >= 1 ? `${Math.round(hours * 10) / 10}h` : `${Math.round(minutes)}m`} · ${percent}%</span></div>
+                <div class="distribution-track"><span style="width:${percent}%"></span></div>
+            </div>`;
+        }).join("");
+    }
+
+    // Detect overlaps when two events on the same date intersect in time.
+    const overlaps = [];
+    const byDate = new Map();
+    schedules.forEach(event => {
+        if (!byDate.has(event.date)) byDate.set(event.date, []);
+        byDate.get(event.date).push(event);
+    });
+    byDate.forEach((events, date) => {
+        const sorted = getSortedSchedules(events);
+        for (let i = 0; i < sorted.length; i++) {
+            const first = sorted[i];
+            const firstStart = getScheduleDateTime(first, "start");
+            let firstEnd = getScheduleDateTime(first, "end");
+            if (firstEnd <= firstStart) firstEnd = new Date(firstEnd.getTime() + 86400000);
+            for (let j = i + 1; j < sorted.length; j++) {
+                const second = sorted[j];
+                const secondStart = getScheduleDateTime(second, "start");
+                if (secondStart >= firstEnd) break;
+                let secondEnd = getScheduleDateTime(second, "end");
+                if (secondEnd <= secondStart) secondEnd = new Date(secondEnd.getTime() + 86400000);
+                if (firstStart < secondEnd && secondStart < firstEnd) {
+                    overlaps.push({ date, first, second });
+                }
+            }
+        }
+    });
+    $("#conflict-count").textContent = String(overlaps.length);
+    $("#conflict-count").classList.toggle("has-conflicts", overlaps.length > 0);
+    $("#overlap-list").innerHTML = overlaps.length
+        ? overlaps.slice(0, 4).map(item => `<div class="overlap-item">
+            <span class="overlap-indicator"></span>
+            <div><strong>${escapeHTML(item.first.title)}</strong><span>overlaps with ${escapeHTML(item.second.title)}</span>
+            <small>${formatDate(item.date, { weekday: "short", day: "numeric", month: "short" })} · ${formatTime(item.first.start)} / ${formatTime(item.second.start)}</small></div>
+        </div>`).join("") + (overlaps.length > 4 ? `<p class="card-footnote">And ${overlaps.length - 4} more conflict${overlaps.length - 4 === 1 ? "" : "s"}.</p>` : "")
+        : '<p class="productivity-empty">No schedule conflicts detected.</p>';
+
+    // Focus slots are gaps of at least 60 minutes between today's scheduled events.
+    const timedToday = todayEvents.map(event => {
+        const start = getScheduleDateTime(event, "start");
+        let end = getScheduleDateTime(event, "end");
+        if (end <= start) end = new Date(end.getTime() + 86400000);
+        return { event, start, end };
+    }).sort((a, b) => a.start - b.start);
+    const focusSlots = [];
+    for (let i = 0; i < timedToday.length - 1; i++) {
+        const gapStart = timedToday[i].end;
+        const gapEnd = timedToday[i + 1].start;
+        const minutes = (gapEnd - gapStart) / 60000;
+        if (minutes >= 60) focusSlots.push({ start: gapStart, end: gapEnd, minutes });
+    }
+    const focusMinutes = focusSlots.reduce((sum, slot) => sum + slot.minutes, 0);
+    $("#focus-total").textContent = focusMinutes >= 60
+        ? `${Math.floor(focusMinutes / 60)}h${Math.round(focusMinutes % 60) ? ` ${Math.round(focusMinutes % 60)}m` : ""}`
+        : `${Math.round(focusMinutes)}m`;
+    $("#focus-description").textContent = focusSlots.length
+        ? `${focusSlots.length} open slot${focusSlots.length === 1 ? "" : "s"} of at least 1 hour between events.`
+        : "No gaps of 1 hour or more between today's events.";
+    $("#focus-slots").innerHTML = focusSlots.length
+        ? focusSlots.map(slot => `<div class="focus-slot"><span class="focus-slot-icon">↗</span><div><strong>${formatTime(`${String(slot.start.getHours()).padStart(2,"0")}:${String(slot.start.getMinutes()).padStart(2,"0")}`)} – ${formatTime(`${String(slot.end.getHours()).padStart(2,"0")}:${String(slot.end.getMinutes()).padStart(2,"0")}`)}</strong><small>${slot.minutes >= 60 ? `${Math.floor(slot.minutes / 60)}h${Math.round(slot.minutes % 60) ? ` ${Math.round(slot.minutes % 60)}m` : ""} available` : `${Math.round(slot.minutes)}m available`}</small></div></div>`).join("")
+        : '<p class="productivity-empty">Try leaving a little breathing room between events.</p>';
+
+    // Monthly summary metrics are derived from the schedule list, not task-completion data.
+    const activeDays = new Set(monthEvents.map(event => event.date)).size;
+    const scheduledMinutes = monthEvents.reduce((sum, event) => sum + getEventDurationMinutes(event), 0);
+    $("#monthly-total").textContent = String(monthEvents.length);
+    $("#monthly-active-days").textContent = String(activeDays);
+    $("#monthly-hours").textContent = `${Math.round(scheduledMinutes / 60 * 10) / 10}h`;
+    const busiest = new Map();
+    monthEvents.forEach(event => busiest.set(event.date, (busiest.get(event.date) || 0) + 1));
+    const busiestEntry = [...busiest.entries()].sort((a, b) => b[1] - a[1])[0];
+    $("#monthly-summary").textContent = monthEvents.length
+        ? `${busiestEntry ? `${busiestEntry[1]} events on your busiest day` : "No busy days"} · based on scheduled time`
+        : "Your month at a glance.";
+}
+
 function renderDashboard() {
     const now = new Date();
     const today = dateKey(now);
@@ -362,6 +479,7 @@ function renderDashboard() {
 
     $("#category-count").textContent = categories.length;
     renderDashboardIntelligence();
+    renderProductivityIntelligence();
 
     renderAgendaList(
         $("#today-agenda"),
