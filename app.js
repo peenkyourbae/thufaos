@@ -497,6 +497,104 @@ function useQuickAddDraft(openForEditing = false) {
     }
 }
 
+
+let commandFilter = "all";
+let commandQuery = "";
+
+function getCommandScheduleResults() {
+    const now = new Date();
+    const today = dateKey(now);
+    let items = getSortedSchedules();
+
+    if (commandFilter === "today") {
+        items = items.filter(item => item.date === today);
+    } else if (commandFilter === "upcoming") {
+        items = items.filter(item => getScheduleDateTime(item, "end") > now);
+    } else if (commandFilter === "conflicts") {
+        const conflictIds = new Set();
+        const byDate = new Map();
+        schedules.forEach(item => {
+            if (!byDate.has(item.date)) byDate.set(item.date, []);
+            byDate.get(item.date).push(item);
+        });
+        byDate.forEach(dayItems => {
+            const ordered = getSortedSchedules(dayItems);
+            for (let i = 0; i < ordered.length; i++) {
+                const a = ordered[i], aStart = getScheduleDateTime(a, "start");
+                let aEnd = getScheduleDateTime(a, "end");
+                if (aEnd <= aStart) aEnd = new Date(aEnd.getTime() + 86400000);
+                for (let j = i + 1; j < ordered.length; j++) {
+                    const b = ordered[j], bStart = getScheduleDateTime(b, "start");
+                    if (bStart >= aEnd) break;
+                    let bEnd = getScheduleDateTime(b, "end");
+                    if (bEnd <= bStart) bEnd = new Date(bEnd.getTime() + 86400000);
+                    if (aStart < bEnd && bStart < aEnd) {
+                        conflictIds.add(a.id); conflictIds.add(b.id);
+                    }
+                }
+            }
+        });
+        items = items.filter(item => conflictIds.has(item.id));
+    } else if (commandFilter === "focus") {
+        const todayItems = getSortedSchedules(schedules.filter(item => item.date === today)).map(item => ({
+            event: item, start: getScheduleDateTime(item, "start"), end: getScheduleDateTime(item, "end")
+        })).sort((a,b) => a.start - b.start);
+        const ids = new Set();
+        for (let i = 0; i < todayItems.length - 1; i++) {
+            if ((todayItems[i+1].start - todayItems[i].end) >= 3600000) {
+                ids.add(todayItems[i].event.id); ids.add(todayItems[i+1].event.id);
+            }
+        }
+        items = items.filter(item => ids.has(item.id));
+    }
+
+    if (commandQuery) {
+        const q = commandQuery.toLowerCase();
+        items = items.filter(item => [item.title,item.category,item.location,item.description,item.date]
+            .some(value => String(value || "").toLowerCase().includes(q)));
+    }
+    return items;
+}
+
+function renderCommandCenter() {
+    const input = $("#command-search");
+    if (!input) return;
+    const results = $("#command-results");
+    $("#command-clear").classList.toggle("hidden", !commandQuery);
+    document.querySelectorAll("[data-command-filter]").forEach(button =>
+        button.classList.toggle("active", button.dataset.commandFilter === commandFilter)
+    );
+    const active = commandFilter !== "all" || commandQuery.length > 0;
+    results.classList.toggle("hidden", !active);
+    if (!active) { results.innerHTML = ""; return; }
+
+    const items = getCommandScheduleResults();
+    const label = {all:"Search results",today:"Today's schedules",upcoming:"Upcoming schedules",conflicts:"Schedules with conflicts",focus:"Schedules around focus gaps"}[commandFilter];
+    if (!items.length) {
+        results.innerHTML = '<div class="command-empty"><strong>No matching schedules</strong><span>Try another keyword or filter.</span></div>';
+        return;
+    }
+    results.innerHTML = `<div class="command-results-heading"><span>${label}</span><span>${items.length} result${items.length===1?"":"s"}</span></div>` +
+        items.slice(0,8).map(item => `<button type="button" class="command-result" data-command-open="${escapeHTML(item.id)}">
+            <span class="command-result-date">${escapeHTML(formatDate(item.date,{weekday:"short",day:"numeric",month:"short"}))}<small>${escapeHTML(formatTime(item.start))}</small></span>
+            <span class="command-result-main"><strong>${escapeHTML(item.title)}</strong><small>${escapeHTML(item.category||"Uncategorized")}${item.location?` · ${escapeHTML(item.location)}`:""}</small></span><span class="command-result-arrow">↗</span>
+        </button>`).join("");
+}
+
+function handleCommandSearch(value) {
+    const text = value.trim();
+    const commands = {"/today":"today","/upcoming":"upcoming","/conflicts":"conflicts","/focus":"focus","/all":"all"};
+    const command = commands[text.toLowerCase()];
+    if (command) {
+        commandFilter = command;
+        commandQuery = "";
+        $("#command-search").value = "";
+    } else {
+        commandQuery = text;
+    }
+    renderCommandCenter();
+}
+
 function getEventDurationMinutes(event) {
     const start = getScheduleDateTime(event, "start");
     let end = getScheduleDateTime(event, "end");
@@ -883,6 +981,7 @@ function renderAll() {
     renderDashboard();
     renderCalendar();
     renderAllSchedules();
+    renderCommandCenter();
 }
 
 function switchView(view) {
@@ -1128,6 +1227,41 @@ document.addEventListener("keydown", event => {
 window.setInterval(() => {
     renderAll();
 }, 60 * 1000);
+
+$("#command-search").addEventListener("input", event => handleCommandSearch(event.target.value));
+$("#command-clear").addEventListener("click", () => {
+    commandQuery = "";
+    $("#command-search").value = "";
+    renderCommandCenter();
+    $("#command-search").focus();
+});
+document.querySelectorAll("[data-command-filter]").forEach(button => {
+    button.addEventListener("click", () => {
+        commandFilter = button.dataset.commandFilter;
+        renderCommandCenter();
+    });
+});
+$("#command-results").addEventListener("click", event => {
+    const button = event.target.closest("[data-command-open]");
+    if (!button) return;
+    const schedule = schedules.find(item => item.id === button.dataset.commandOpen);
+    if (schedule) openModal(schedule);
+});
+document.addEventListener("keydown", event => {
+    const target = event.target;
+    const typing = target && (target.matches("input, textarea, select") || target.isContentEditable);
+    if (event.key === "/" && !typing && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        event.preventDefault();
+        $("#command-search").focus();
+    }
+    if (event.key === "Escape" && document.activeElement === $("#command-search")) {
+        commandQuery = "";
+        commandFilter = "all";
+        $("#command-search").value = "";
+        renderCommandCenter();
+        $("#command-search").blur();
+    }
+});
 
 $("#quick-add-form").addEventListener("submit", handleQuickAddSubmit);
 $("#quick-add-edit").addEventListener("click", () => useQuickAddDraft(true));

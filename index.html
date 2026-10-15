@@ -83,6 +83,26 @@
 </div>
             </header>
 
+            <section class="command-center" aria-label="Command Center">
+                <div class="command-center-top">
+                    <div><p class="eyebrow">COMMAND CENTER</p><strong>Find your next move.</strong></div>
+                    <kbd class="command-shortcut">/</kbd>
+                </div>
+                <div class="command-search-wrap">
+                    <span class="command-search-icon" aria-hidden="true">⌕</span>
+                    <input id="command-search" type="search" autocomplete="off" placeholder="Search schedules or type /today, /conflicts…" aria-label="Search schedules or commands">
+                    <button type="button" id="command-clear" class="command-clear hidden" aria-label="Clear search">×</button>
+                </div>
+                <div class="command-chips" aria-label="Quick filters">
+                    <button type="button" class="command-chip active" data-command-filter="all">All</button>
+                    <button type="button" class="command-chip" data-command-filter="today">Today</button>
+                    <button type="button" class="command-chip" data-command-filter="upcoming">Upcoming</button>
+                    <button type="button" class="command-chip" data-command-filter="conflicts">Conflicts</button>
+                    <button type="button" class="command-chip" data-command-filter="focus">Focus slots</button>
+                </div>
+                <div id="command-results" class="command-results hidden" aria-live="polite"></div>
+            </section>
+
             <section id="dashboard-view">
 
                 <div class="welcome-card">
