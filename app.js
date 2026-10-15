@@ -317,9 +317,9 @@ function renderDashboardIntelligence() {
         nextCard.classList.remove("is-ongoing");
     }
 
-    // Daily progress is time-based: events whose end time has passed count as completed.
+    // A schedule can be marked complete manually; elapsed events remain completed by default.
     const completedToday = todayEvents.filter(
-        item => getScheduleDateTime(item, "end") <= now
+        item => Boolean(item.completedAt) || getScheduleDateTime(item, "end") <= now
     ).length;
     const totalToday = todayEvents.length;
     const percent = totalToday ? Math.round((completedToday / totalToday) * 100) : 0;
@@ -807,14 +807,17 @@ function renderAgendaList(container, items, emptyMessage, showToday = false) {
             : startsAt <= now && endsAt > now
                 ? "current"
                 : "upcoming";
-        const statusLabel = status === "past"
-            ? "Elapsed"
-            : status === "current"
-                ? "Happening now"
-                : "Upcoming";
+        const isCompleted = Boolean(event.completedAt);
+        const statusLabel = isCompleted
+            ? "Completed"
+            : status === "past"
+                ? "Elapsed"
+                : status === "current"
+                    ? "Happening now"
+                    : "Upcoming";
 
         return `
-        <article class="agenda-card agenda-${status}">
+        <article class="agenda-card agenda-${status}${isCompleted ? " agenda-completed" : ""}">
 
             <div class="agenda-time">
                 ${escapeHTML(formatTime(event.start))}
@@ -828,8 +831,8 @@ function renderAgendaList(container, items, emptyMessage, showToday = false) {
 
                 <div class="agenda-title-row">
                     <h3>${escapeHTML(event.title)}</h3>
-                    <span class="agenda-status status-${status}">
-                        ${status === "current" ? '<span class="status-pulse"></span>' : ""}
+                    <span class="agenda-status ${isCompleted ? "status-completed" : `status-${status}`}">
+                        ${!isCompleted && status === "current" ? '<span class="status-pulse"></span>' : ""}
                         ${statusLabel}
                     </span>
                 </div>
@@ -866,6 +869,14 @@ function renderAgendaList(container, items, emptyMessage, showToday = false) {
             </div>
 
             <div class="agenda-actions">
+
+                <button
+                    class="icon-button complete-button ${isCompleted ? "is-completed" : ""}"
+                    data-action="complete"
+                    data-id="${escapeHTML(event.id)}"
+                    aria-label="${isCompleted ? "Mark schedule as not completed" : "Mark schedule as completed"}"
+                    title="${isCompleted ? "Undo completion" : "Mark as done"}"
+                >${isCompleted ? "✓" : "○"}</button>
 
                 <button
                     class="icon-button"
@@ -1098,6 +1109,7 @@ function handleFormSubmit(event) {
         description: $("#event-description").value.trim(),
         reminder: Number($("#event-reminder").value),
         calendarEventId: previous?.calendarEventId || null,
+        completedAt: previous?.completedAt || null,
         createdAt: previous?.createdAt || new Date().toISOString(),
         updatedAt: new Date().toISOString()
     };
@@ -1173,6 +1185,14 @@ function handleAgendaAction(event) {
 
     if (action === "edit") {
         openModal(schedule);
+    }
+
+    if (action === "complete") {
+        schedule.completedAt = schedule.completedAt ? null : new Date().toISOString();
+        saveSchedules();
+        renderAll();
+        showToast(schedule.completedAt ? "Schedule marked as completed." : "Completion undone.");
+        return;
     }
 
     if (action === "delete") {

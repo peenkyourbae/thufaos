@@ -421,6 +421,29 @@ h2 {
     gap: 6px;
 }
 
+/* Quick completion controls */
+.agenda-actions .complete-button {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--muted);
+}
+.agenda-actions .complete-button:hover,
+.agenda-actions .complete-button.is-completed {
+    color: var(--accent);
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.agenda-card.agenda-completed .agenda-details h3 {
+    color: var(--muted);
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+}
+.status-completed {
+    color: var(--accent) !important;
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+
 .icon-button {
     display: grid;
     place-items: center;
