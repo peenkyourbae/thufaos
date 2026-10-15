@@ -2,7 +2,7 @@
   "name": "ThufaOS Personal Schedule Manager",
   "short_name": "ThufaOS",
   "description": "Your personal schedule manager",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#101114",
@@ -21,5 +21,6 @@
       "type": "image/png",
       "purpose": "any"
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }

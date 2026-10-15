@@ -2462,3 +2462,32 @@ html[data-theme="light"] .quick-add-form input {background:#fff}
 html[data-theme="light"] .command-result:hover {background:rgba(0,0,0,.035)}
 html[data-theme="light"] .day-load-meter > span {background:rgba(89,143,34,.35)}
 @media(max-width:700px){.settings-grid{grid-template-columns:1fr}.settings-card{padding:17px;border-radius:14px}.settings-actions{flex-direction:column}.settings-actions button{width:100%}}
+
+/* PWA connection and update status */
+.connection-status {
+    position: sticky;
+    top: 0;
+    z-index: 300;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 10px 16px;
+    background: #292b30;
+    color: #f4f4f5;
+    border-bottom: 1px solid #41434b;
+    font-size: 12px;
+    text-align: center;
+}
+.connection-status[hidden] { display: none !important; }
+.connection-status.is-offline { background: #4a321b; border-color: #75502b; }
+.connection-status.is-update { background: #26351b; border-color: #465d30; }
+.connection-refresh {
+    border: 1px solid #b8f36b;
+    border-radius: 8px;
+    padding: 6px 10px;
+    background: #b8f36b;
+    color: #15190f;
+    font-weight: 700;
+}
