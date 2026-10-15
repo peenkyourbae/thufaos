@@ -2776,3 +2776,43 @@ html[data-theme="light"] .planner-panel{border-color:#e8ece9}
     .intelligence-grid { grid-template-columns: minmax(0, 1fr); }
     .weekly-card { grid-column: auto; }
 }
+
+
+/* Mobile navigation: keep all five destinations reachable by horizontal swipe. */
+@media (max-width: 600px) {
+    .sidebar {
+        overflow-x: auto;
+        overflow-y: hidden;
+        overscroll-behavior-x: contain;
+        scrollbar-width: none;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .sidebar::-webkit-scrollbar,
+    .navigation::-webkit-scrollbar {
+        display: none;
+        width: 0;
+        height: 0;
+    }
+
+    .navigation {
+        display: flex;
+        width: max-content;
+        min-width: 100%;
+        height: 100%;
+        grid-template-columns: none;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+    }
+
+    .nav-item {
+        flex: 0 0 76px;
+        width: 76px;
+        min-width: 76px;
+        max-width: 76px;
+        box-sizing: border-box;
+        white-space: nowrap;
+        font-size: 9px;
+    }
+}
