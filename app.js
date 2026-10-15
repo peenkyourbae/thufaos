@@ -5,6 +5,7 @@ const $ = (selector) => document.querySelector(selector);
 const dashboardView = $("#dashboard-view");
 const calendarView = $("#calendar-view");
 const schedulesView = $("#schedules-view");
+const intelligenceView = $("#intelligence-view");
 const settingsView = $("#settings-view");
 const modal = $("#schedule-modal");
 const form = $("#schedule-form");
@@ -182,15 +183,13 @@ function dateKey(date) {
 }
 
 function parseLocalDate(dateString) {
-    // Accept only a valid YYYY-MM-DD date; use today for missing/invalid legacy values.
     if (typeof dateString !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-        return new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+        return new Date();
     }
-
     const [year, month, day] = dateString.split("-").map(Number);
     const parsed = new Date(year, month - 1, day);
-    if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
-        return new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+    if (Number.isNaN(parsed.getTime()) || parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+        return new Date();
     }
     return parsed;
 }
@@ -1188,6 +1187,7 @@ function switchView(view) {
     dashboardView.classList.toggle("hidden", view !== "dashboard");
     calendarView.classList.toggle("hidden", view !== "calendar");
     schedulesView.classList.toggle("hidden", view !== "schedules");
+    intelligenceView.classList.toggle("hidden", view !== "intelligence");
     settingsView.classList.toggle("hidden", view !== "settings");
 
     document.querySelectorAll(".nav-item").forEach(button => {
@@ -1198,6 +1198,7 @@ function switchView(view) {
         dashboard: "Dashboard",
         calendar: "Calendar",
         schedules: "All Schedules",
+        intelligence: "Productivity Hub",
         settings: "Settings"
     };
     $("#page-title").textContent = titles[view] || "ThufaOS";
@@ -1302,12 +1303,7 @@ function openModal(event = null, plannerDraft = null) {
     $("#event-category").value = event?.category || "Academic";
     $("#event-priority").value = event?.priority || "medium";
     $("#event-energy").value = event?.energy || "normal";
-    const durationSource = event || {
-        date: plannerDraft?.date || selectedDate || dateKey(new Date()),
-        start: plannerDraft?.start || "09:00",
-        end: plannerDraft?.end || "10:00"
-    };
-    $("#event-estimated-minutes").value = String(event?.estimatedMinutes || getEventDurationMinutes(durationSource) || 60);
+    $("#event-estimated-minutes").value = String(event?.estimatedMinutes || getEventDurationMinutes(event || { start: plannerDraft?.start || "09:00", end: plannerDraft?.end || "10:00" }) || 60);
     $("#event-location").value = event?.location || "";
     $("#event-description").value = event?.description || "";
 

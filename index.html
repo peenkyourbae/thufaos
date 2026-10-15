@@ -47,6 +47,10 @@
                     <span>☷</span> All Schedules
                 </button>
 
+                <button class="nav-item" data-view="intelligence">
+                    <span>✦</span> Productivity Hub
+                </button>
+
                 <button class="nav-item" data-view="settings">
                     <span>⚙</span> Settings
                 </button>
@@ -224,6 +228,47 @@
                     </div>
                 </section>
 
+                <section class="section-block">
+
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">YOUR PLANNER</p>
+                            <h2>Today's Agenda</h2>
+                        </div>
+
+                        <button class="text-button" id="view-all">
+                            View all →
+                        </button>
+                    </div>
+
+                    <div id="today-agenda" class="agenda-list"></div>
+
+                </section>
+
+                <section class="section-block">
+
+                    <div class="section-heading">
+                        <div>
+                            <p class="eyebrow">COMING UP</p>
+                            <h2>Upcoming Schedules</h2>
+                        </div>
+                    </div>
+
+                    <div id="upcoming-agenda" class="agenda-list"></div>
+
+                </section>
+
+            </section>
+
+            <section id="intelligence-view" class="hidden">
+                <div class="section-heading intelligence-page-heading">
+                    <div>
+                        <p class="eyebrow">THINK CLEARER. PLAN BETTER.</p>
+                        <h2>Productivity Hub</h2>
+                        <p class="page-subtitle">Insights, workload signals, and your daily plan in one place.</p>
+                    </div>
+                </div>
+
                 <section class="productivity-intelligence" aria-label="Productivity insights">
                     <div class="section-heading intelligence-section-heading">
                         <div>
@@ -305,6 +350,11 @@
                         <button type="button" class="secondary-button" id="planner-refresh">Refresh plan</button>
                     </div>
                     <div class="smart-planner-summary" id="planner-summary" aria-live="polite"></div>
+                    <div class="planner-priority-panel">
+                        <div class="planner-panel-heading"><h3>Priority queue</h3><span>WHAT TO TACKLE FIRST</span></div>
+                        <p class="planner-priority-intro">Unfinished schedules ranked by priority. Energy labels help you choose the right kind of work for your current capacity.</p>
+                        <div id="planner-priority-queue" class="planner-priority-queue" aria-live="polite"></div>
+                    </div>
                     <div class="smart-planner-columns">
                         <div class="planner-panel">
                             <div class="planner-panel-heading"><h3>Recommended flow</h3><span>TIME + CATEGORY</span></div>
@@ -316,36 +366,6 @@
                         </div>
                     </div>
                     <p class="planner-disclaimer">Suggestions are based on your saved schedules and available gaps. Existing events are never moved automatically.</p>
-                </section>
-
-                <section class="section-block">
-
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">YOUR PLANNER</p>
-                            <h2>Today's Agenda</h2>
-                        </div>
-
-                        <button class="text-button" id="view-all">
-                            View all →
-                        </button>
-                    </div>
-
-                    <div id="today-agenda" class="agenda-list"></div>
-
-                </section>
-
-                <section class="section-block">
-
-                    <div class="section-heading">
-                        <div>
-                            <p class="eyebrow">COMING UP</p>
-                            <h2>Upcoming Schedules</h2>
-                        </div>
-                    </div>
-
-                    <div id="upcoming-agenda" class="agenda-list"></div>
-
                 </section>
 
             </section>
@@ -528,6 +548,29 @@
                         </select>
                     </div>
                 </div>
+
+                <div class="form-row">
+                    <div>
+                        <label for="event-priority">Priority</label>
+                        <select id="event-priority">
+                            <option value="critical">Critical</option>
+                            <option value="high">High</option>
+                            <option value="medium" selected>Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="event-energy">Energy type</label>
+                        <select id="event-energy">
+                            <option value="deep">Deep Work</option>
+                            <option value="normal" selected>Normal</option>
+                            <option value="light">Light Task</option>
+                        </select>
+                    </div>
+                </div>
+                <label for="event-estimated-minutes">Estimated effort (minutes)</label>
+                <input type="number" id="event-estimated-minutes" min="5" max="1440" step="5" value="60">
+                <p class="repeat-help">Use priority to rank what matters most, energy type to describe the task's mental effort, and estimated effort for planning.</p>
 
                 <div class="form-row">
                     <div>
