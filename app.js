@@ -694,10 +694,12 @@ function renderProductivityIntelligence() {
     $("#conflict-count").textContent = String(overlaps.length);
     $("#conflict-count").classList.toggle("has-conflicts", overlaps.length > 0);
     $("#overlap-list").innerHTML = overlaps.length
-        ? overlaps.slice(0, 4).map(item => `<div class="overlap-item">
+        ? overlaps.slice(0, 4).map(item => `<div class="overlap-item" data-conflict-row="${escapeHTML(item.second.id)}">
             <span class="overlap-indicator"></span>
-            <div><strong>${escapeHTML(item.first.title)}</strong><span>overlaps with ${escapeHTML(item.second.title)}</span>
-            <small>${formatDate(item.date, { weekday: "short", day: "numeric", month: "short" })} · ${formatTime(item.first.start)} / ${formatTime(item.second.start)}</small></div>
+            <div class="overlap-item-content"><strong>${escapeHTML(item.first.title)}</strong><span>overlaps with ${escapeHTML(item.second.title)}</span>
+            <small>${formatDate(item.date, { weekday: "short", day: "numeric", month: "short" })} · ${formatTime(item.first.start)} / ${formatTime(item.second.start)}</small>
+            <button type="button" class="conflict-suggest-button" data-action="conflict-suggest" data-id="${escapeHTML(item.second.id)}">Find free time</button>
+            <div class="conflict-suggestions" data-suggestions-for="${escapeHTML(item.second.id)}" hidden></div></div>
         </div>`).join("") + (overlaps.length > 4 ? `<p class="card-footnote">And ${overlaps.length - 4} more conflict${overlaps.length - 4 === 1 ? "" : "s"}.</p>` : "")
         : '<p class="productivity-empty">No schedule conflicts detected.</p>';
 
@@ -1034,7 +1036,78 @@ function switchView(view) {
     schedulesView.classList.toggle("hidden", view !== "schedules");
     settingsView.classList.toggle("hidden", view !== "settings");
 
-    document.querySelectorAll(".nav-item").forEach(button => {
+    function getConflictSuggestions(target, limit = 3) {
+    if (!target || !target.date) return [];
+    const duration = getEventDurationMinutes(target);
+    if (!duration || duration > 15 * 60) return [];
+    const dayStart = 7 * 60;
+    const dayEnd = 22 * 60;
+    const busy = schedules.filter(item => item.id !== target.id && item.date === target.date).map(item => {
+        const start = timeToMinutes(item.start);
+        let end = timeToMinutes(item.end);
+        if (end <= start) end += 1440;
+        return { start, end };
+    }).filter(item => item.end > dayStart && item.start < dayEnd).sort((a, b) => a.start - b.start);
+    const originalStart = timeToMinutes(target.start);
+    const results = [];
+    for (let start = dayStart; start + duration <= dayEnd; start += 30) {
+        if (Math.abs(start - originalStart) < 30) continue;
+        const end = start + duration;
+        if (busy.some(item => start < item.end && item.start < end)) continue;
+        results.push({ start: minutesToTime(start), end: minutesToTime(end) });
+        if (results.length >= limit) break;
+    }
+    return results;
+}
+
+function timeToMinutes(value) {
+    const [hours, minutes] = String(value || "0:0").split(":").map(Number);
+    return (hours || 0) * 60 + (minutes || 0);
+}
+
+function minutesToTime(value) {
+    return `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+}
+
+$("#overlap-list").addEventListener("click", event => {
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
+    const target = schedules.find(item => item.id === button.dataset.id);
+    if (!target) return;
+
+    if (button.dataset.action === "conflict-suggest") {
+        const panel = $(`[data-suggestions-for="${CSS.escape(target.id)}"]`);
+        if (!panel) return;
+        if (!panel.hidden) { panel.hidden = true; return; }
+        const suggestions = getConflictSuggestions(target);
+        panel.hidden = false;
+        panel.innerHTML = suggestions.length ? `<p class="conflict-suggestion-label">Available alternatives · ${escapeHTML(target.title)}</p>` + suggestions.map(slot => `<button type="button" class="conflict-slot-button" data-action="conflict-move" data-id="${escapeHTML(target.id)}" data-start="${slot.start}" data-end="${slot.end}">${formatTime(slot.start)}–${formatTime(slot.end)} <span>Move here</span></button>`).join("") : '<p class="conflict-no-slots">No free 30-minute-aligned slot found between 07:00 and 22:00. Edit the schedule manually to explore other times.</p>';
+        return;
+    }
+
+    if (button.dataset.action === "conflict-move") {
+        const start = button.dataset.start;
+        const end = button.dataset.end;
+        const hasConflict = schedules.some(item => {
+            if (item.id === target.id || item.date !== target.date) return false;
+            const a = timeToMinutes(item.start), bRaw = timeToMinutes(item.end);
+            const b = bRaw <= a ? bRaw + 1440 : bRaw;
+            const proposedStart = timeToMinutes(start), proposedEnd = timeToMinutes(end);
+            return proposedStart < b && a < proposedEnd;
+        });
+        if (hasConflict) { showToast("That slot is no longer available. Find suggestions again."); return; }
+        const approved = confirm(`Move only this occurrence of "${target.title}" to ${formatTime(start)}–${formatTime(end)} on ${formatDate(target.date)}?`);
+        if (!approved) return;
+        target.start = start;
+        target.end = end;
+        target.updatedAt = new Date().toISOString();
+        saveSchedules();
+        renderAll();
+        showToast("Schedule moved to the selected free slot.");
+    }
+});
+
+document.querySelectorAll(".nav-item").forEach(button => {
         button.classList.toggle(
             "active",
             button.dataset.view === view
