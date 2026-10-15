@@ -2816,3 +2816,45 @@ html[data-theme="light"] .planner-panel{border-color:#e8ece9}
         font-size: 9px;
     }
 }
+
+
+/* Mobile nav scroll fix v2: scroll the nav row itself, not the fixed sidebar. */
+@media (max-width: 600px) {
+  .sidebar {
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+  }
+  .sidebar .navigation {
+    display: flex !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    justify-content: flex-start !important;
+    align-items: center !important;
+    gap: 6px !important;
+    padding: 0 0 2px !important;
+    box-sizing: border-box !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+  }
+  .sidebar .navigation::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  .sidebar .navigation .nav-item {
+    flex: 0 0 96px !important;
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+    height: 53px !important;
+    min-height: 48px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+  }
+}
