@@ -183,8 +183,22 @@ function dateKey(date) {
 }
 
 function parseLocalDate(dateString) {
+    // Be defensive: some duration-only calculations may not have a date yet.
+    if (typeof dateString !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+    }
+
     const [year, month, day] = dateString.split("-").map(Number);
-    return new Date(year, month - 1, day);
+    const parsed = new Date(year, month - 1, day);
+    // Reject impossible dates such as 2026-02-31.
+    if (parsed.getFullYear() !== year || parsed.getMonth() !== month - 1 || parsed.getDate() !== day) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return today;
+    }
+    return parsed;
 }
 
 function formatDate(dateString, options = {
@@ -248,7 +262,7 @@ function getUpcomingSchedules() {
 function getScheduleDateTime(event, field = "start") {
     const time = event[field] || "00:00";
     const [hours, minutes] = time.split(":").map(Number);
-    const date = parseLocalDate(event.date);
+    const date = parseLocalDate(event?.date || dateKey(new Date()));
     date.setHours(hours || 0, minutes || 0, 0, 0);
     return date;
 }
@@ -1296,7 +1310,14 @@ function openModal(event = null, plannerDraft = null) {
     $("#event-category").value = event?.category || "Academic";
     $("#event-priority").value = event?.priority || "medium";
     $("#event-energy").value = event?.energy || "normal";
-    $("#event-estimated-minutes").value = String(event?.estimatedMinutes || getEventDurationMinutes(event || { start: plannerDraft?.start || "09:00", end: plannerDraft?.end || "10:00" }) || 60);
+    const durationEvent = event || {
+        date: plannerDraft?.date || $("#event-date").value || selectedDate || dateKey(new Date()),
+        start: plannerDraft?.start || $("#event-start").value || "09:00",
+        end: plannerDraft?.end || $("#event-end").value || "10:00"
+    };
+    $("#event-estimated-minutes").value = String(
+        event?.estimatedMinutes || getEventDurationMinutes(durationEvent) || 60
+    );
     $("#event-location").value = event?.location || "";
     $("#event-description").value = event?.description || "";
 
